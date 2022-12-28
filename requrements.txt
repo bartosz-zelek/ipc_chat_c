@@ -1,0 +1,4 @@
+1. Config file
+    1.1 All names in config file must be alphanumeric.
+        1.1.1 The exception is colon (':') in sections' names.
+    1.2 File must end with new line character ('\n').

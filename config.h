@@ -1,0 +1,1 @@
+char** read_section(const char* filename, const char* section);
