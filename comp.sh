@@ -1,3 +1,3 @@
-gcc -o server.out src/server.c src/config.c
-gcc -o client.out src/client.c
-./server.out
+gcc -o server.out server.c config.c
+gcc -o client.out client.c
+./client.out

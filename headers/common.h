@@ -5,12 +5,12 @@
 #define PROT_LOGIN 1
 #define PROT_LOGOUT 2
 
-struct User {
+typedef struct {
     long mtype;
     int pid;
     char username[MAX_USERNAME_LENGTH];
     char password[MAX_PASSWORD_LENGTH];
-};
+}User;
 
 struct LoginResponse {
     long mtype;

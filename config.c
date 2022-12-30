@@ -1,4 +1,4 @@
-#include "../headers/config.h" // add guard
+#include "headers/config.h" // add guard
 
 #define MAX_LINE_LENGTH 200
 #define MAX_USERNAME_LENGTH 20

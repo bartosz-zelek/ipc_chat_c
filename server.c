@@ -1,5 +1,5 @@
-#include "../headers/config.h"
-#include "../headers/common.h"
+#include "headers/config.h"
+#include "headers/common.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,12 +29,15 @@ char*** make_pairs_user_password(){
         strcpy(pairs_user_password[i][1], password);
     }
     pairs_user_password[i] = NULL;
+    for (int i=0; users_with_passwords[i] != NULL; i++){
+        free(users_with_passwords[i]);
+        users_with_passwords[i] = NULL;
+    }
     free(users_with_passwords);
     return pairs_user_password;
 }
 
-int are_credentials_valid(char* username, char* password){
-    char*** pairs_user_password = make_pairs_user_password();
+int are_credentials_valid(char* username, char* password, char*** pairs_user_password){
     for (int i=0; pairs_user_password[i] != NULL; i++){
         if (strcmp(pairs_user_password[i][0], username) == 0 && strcmp(pairs_user_password[i][1], password) == 0){
             return 1;
@@ -50,12 +53,14 @@ int main(int argc, char* argv[]){
         exit(1);
     }
 
-    struct User user;
+    User user;
     UserData* logged_users[MAX_USERS] = {NULL};
 
+    char*** pairs_user_password = make_pairs_user_password();
+
     while (1){
-        if (msgrcv(main_queue_id, &user, sizeof(user), PROT_LOGIN, IPC_NOWAIT) != -1){ // check if someone is trying to log in
-            if (are_credentials_valid(user.username, user.password)){
+        if (msgrcv(main_queue_id, &user, sizeof(user)-sizeof(long), PROT_LOGIN, IPC_NOWAIT) != -1){ // check if someone is trying to log in
+            if (are_credentials_valid(user.username, user.password, pairs_user_password)){
                 // user is valid
                 // create new queue for this user
                 // mtype = user.pid
@@ -72,7 +77,7 @@ int main(int argc, char* argv[]){
                 response.mtype = user.pid;
                 response.success = 1;
 
-                msgsnd(main_queue_id, &response, sizeof(response), 0);
+                msgsnd(main_queue_id, &response, sizeof(response)-sizeof(long), 0);
 
                 // add user to pairs_user_queueid
                 int i;
@@ -88,17 +93,19 @@ int main(int argc, char* argv[]){
                 struct LoginResponse response;
                 response.mtype = user.pid;
                 response.success = 0;
-                msgsnd(main_queue_id, &response, sizeof(response), 0);
+                msgsnd(main_queue_id, &response, sizeof(response)-sizeof(long), 0);
                 printf("User %s failed to log in\n", user.username);
             }
         }
 
         for (int i=0; i<MAX_USERS; i++){ // check if someone is trying to log out
-            if (logged_users[i] != NULL && msgrcv(logged_users[i]->queue_id, &user, sizeof(user), PROT_LOGOUT, IPC_NOWAIT) != -1){
-                printf("User %s logged out\n", logged_users[i]->username); // leak
-                // msgctl(logged_users[i]->queue_id, IPC_RMID, NULL);
-                // free(logged_users[i]);
-                // logged_users[i] = NULL;
+            if (logged_users[i] != NULL){
+                if (msgrcv(logged_users[i]->queue_id, &user, sizeof(user)-sizeof(long), PROT_LOGOUT, IPC_NOWAIT) != -1){
+                    printf("User %s logged out\n", logged_users[i]->username);
+                    msgctl(logged_users[i]->queue_id, IPC_RMID, NULL);
+                    free(logged_users[i]);
+                    logged_users[i] = NULL;
+                }
             }
         }
 

@@ -1,4 +1,4 @@
-#include "../headers/common.h"
+#include "headers/common.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,16 +16,16 @@ int login_procedure(int main_queue_id){
     printf("Enter password: ");
     scanf("%s", password);
 
-    struct User user;
+    User user;
     user.mtype = PROT_LOGIN;
     user.pid = getpid();
     strcpy(user.username, username);
     strcpy(user.password, password);
 
-    msgsnd(main_queue_id, &user, sizeof(user), 0);
+    msgsnd(main_queue_id, &user, sizeof(user)-sizeof(long), 0);
 
     struct LoginResponse response;
-    msgrcv(main_queue_id, &response, sizeof(response), getpid(), 0);
+    msgrcv(main_queue_id, &response, sizeof(response)-sizeof(long), getpid(), 0);
     if (response.success){
         printf("Login successful\n");
         return 1;
@@ -36,10 +36,10 @@ int login_procedure(int main_queue_id){
 }
 
 int logout_procedure(int private_queue_id){
-    struct User user;
+    User user;
     user.mtype = PROT_LOGOUT;
     user.pid = getpid();
-    msgsnd(private_queue_id, &user, sizeof(user), 0);
+    msgsnd(private_queue_id, &user, sizeof(user)-sizeof(long), 0);
     return 0;
 }
 
@@ -51,7 +51,7 @@ int main(int argc, char* argv[]){
     }
     while (login_procedure(main_queue_id) == 0);
     int private_queue_id = msgget(getpid(), 0666 | IPC_CREAT);
-    struct User user;
+    User user;
     user.pid = getpid();
 
     int action;
