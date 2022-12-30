@@ -1,16 +1,15 @@
-#include "config.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "../headers/config.h" // add guard
 
 #define MAX_LINE_LENGTH 200
-#define MAX_USERS 100
 #define MAX_USERNAME_LENGTH 20
 #define MAX_PASSWORD_LENGTH 20
 
 #define MAX_LINE_LENGTH 200
 #define MAX_RECORDS 100
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 FILE* open_config_file(const char* filename){
     FILE* fp = fopen(filename, "r");
@@ -51,6 +50,6 @@ char** read_section(const char* filename, const char* section){
     }
     fclose(fp);
     free(line);
-    records[recordIndex] = NULL;
+    records[recordIndex] = NULL; // NULL at the end of array
     return records;
 }
