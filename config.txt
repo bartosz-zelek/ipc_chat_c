@@ -1,7 +1,5 @@
-AHA SPOKO:
 USERS:
 test1 test1
-test2 test2
-USERS:
-asdasd
-
+GROUPS:
+group1 test1 test2 test3 test4
+group2 test2

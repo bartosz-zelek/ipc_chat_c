@@ -17,9 +17,14 @@ typedef struct{ // similar to User, but for inner use
     int queue_id;
 } UserData;
 
+typedef struct{
+    char name[MAX_GROUP_NAME_LENGTH];
+    char* usernames[MAX_USERS+1];
+} GroupData;
+
 // returns array with UserData* elements, where only username and password are set
-UserData** read_users_data_from_config(char* config_file){
-    char** users_with_passwords = read_section(config_file, "USERS:");
+UserData** read_users_data_from_config(){
+    char** users_with_passwords = read_section(CONFIG_FILE, "USERS:");
     UserData** users_data = malloc(sizeof(UserData*) * MAX_USERS+1);
     int i;
     for (i=0; users_with_passwords[i] != NULL; i++){
@@ -45,6 +50,36 @@ int are_credentials_valid(char* username, char* password, UserData** users_data)
         }
     }
     return 0;
+}
+
+GroupData** read_groups_data_from_config(){
+    char** groups_users = read_section(CONFIG_FILE, "GROUPS:");
+    GroupData** groups_data = malloc(sizeof(GroupData*) * MAX_GROUPS+1);
+    int i;
+    for (i=0; groups_users[i] != NULL; i++){
+        // memset(groups_data[i]->usernames, 0, sizeof(groups_data[i]->usernames));
+        char* group_name = strtok(groups_users[i], " ");
+        groups_data[i] = malloc(sizeof(GroupData));
+        strcpy(groups_data[i]->name, group_name);
+        int j = 0;
+        while (group_name != NULL){
+            char* username = strtok(NULL, " ");
+            if (username == NULL){
+                break;
+            }
+            groups_data[i]->usernames[j] = malloc(sizeof(char) * MAX_USERNAME_LENGTH);
+            strcpy(groups_data[i]->usernames[j], username);
+            j++;
+        }
+        groups_data[i]->usernames[j] = NULL;
+    }
+    groups_data[i] = NULL;
+    for (int i=0; groups_users[i] != NULL; i++){
+        free(groups_users[i]);
+        groups_users[i] = NULL;
+    }
+    free(groups_users);
+    return groups_data;
 }
 
 void catch_and_perform_login_action(int main_queue_id, UserData** users_data, UserData** logged_users){
@@ -97,7 +132,7 @@ void catch_and_perform_login_action(int main_queue_id, UserData** users_data, Us
     }
 }
 
-void catch_and_perform_logout_action(int main_queue_id, UserData** users_data, UserData** logged_users){
+void catch_and_perform_logout_action(UserData** logged_users){
     User tmp_user;
 
     for (int i=0; i<MAX_USERS; i++){ // check if someone is trying to log out
@@ -112,7 +147,7 @@ void catch_and_perform_logout_action(int main_queue_id, UserData** users_data, U
     }
 }
 
-void catch_and_perform_check_loggedin_users_action(int main_queue_id, UserData** users_data, UserData** logged_users){
+void catch_and_perform_check_loggedin_users_action(UserData** logged_users){
     Message msg;
 
     for (int i=0; i<MAX_USERS; i++){
@@ -120,6 +155,7 @@ void catch_and_perform_check_loggedin_users_action(int main_queue_id, UserData**
             if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message)-sizeof(long), PROT_CHECK_LOGGEDIN_REQUEST, IPC_NOWAIT) != -1){ // someone requested for list of logged users
                 // prepare message
                 memset(msg.string, 0, sizeof(msg.string));
+
                 for (int j=0; j<MAX_USERS; j++){
                     if (logged_users[j] != NULL){
                         strcat(msg.string, logged_users[j]->username);
@@ -128,6 +164,30 @@ void catch_and_perform_check_loggedin_users_action(int main_queue_id, UserData**
                 }
                 printf("Sending list of logged users to user %s\n", logged_users[i]->username);
                 msg.mtype = PROT_CHECK_LOGGEDIN_RESPONSE;
+                if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
+                    perror("Error: Could not send response to client");
+                    exit(1);
+                }
+            }
+        }
+    }
+}
+
+void catch_and_perform_check_groups_action(GroupData** groups_data, UserData** logged_users){
+    Message msg;
+    for (int i=0; i<MAX_USERS; i++){
+        if (logged_users[i] != NULL){
+            if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message)-sizeof(long), PROT_CHECK_GROUPS_REQUEST, IPC_NOWAIT) != -1){
+                memset(msg.string, 0, sizeof(msg.string));
+
+                for (int j=0; j<MAX_GROUPS; j++){
+                    if (groups_data[j] != NULL){
+                        strcat(msg.string, groups_data[j]->name);
+                        strcat(msg.string, "\n");
+                    }
+                }
+                printf("Sending list of groups to user %s\n", logged_users[i]->username);
+                msg.mtype = PROT_CHECK_GROUPS_RESPONSE;
                 if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
                     perror("Error: Could not send response to client");
                     exit(1);
@@ -146,14 +206,17 @@ int main(int argc, char* argv[]){
     }
 
     UserData* logged_users[MAX_USERS] = {NULL}; // array of logged users - no one is logged in at the beginning
-    UserData** users_from_config = read_users_data_from_config("config.txt"); // array of users from config file - size is MAX_USERS+1 (last element is NULL)
+    UserData** users_from_config = read_users_data_from_config(); // array of users from config file - size is MAX_USERS+1 (last element is NULL)
+    GroupData** groups_data = read_groups_data_from_config(); // array of groups from config file - size is MAX_GROUPS+1 (last element is NULL)
 
     while (1){
         catch_and_perform_login_action(main_queue_id, users_from_config, logged_users);
 
-        catch_and_perform_logout_action(main_queue_id, users_from_config, logged_users);
+        catch_and_perform_logout_action(logged_users);
 
-        catch_and_perform_check_loggedin_users_action(main_queue_id, users_from_config, logged_users);
+        catch_and_perform_check_loggedin_users_action(logged_users);
+
+        catch_and_perform_check_groups_action(groups_data, logged_users);
     }
 
     return 0;

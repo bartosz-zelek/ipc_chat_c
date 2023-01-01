@@ -72,6 +72,22 @@ int check_loggedin_users(int private_queue_id){
     return 1;
 }
 
+int check_groups(int private_queue_id){
+    Message msg;
+    msg.mtype = PROT_CHECK_GROUPS_REQUEST;
+    if (msgsnd(private_queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
+        perror("Error: Could not send message to server");
+        exit(1);
+    }
+    if (msgrcv(private_queue_id, &msg, sizeof(Message)-sizeof(long), PROT_CHECK_GROUPS_RESPONSE, 0) == -1){
+        perror("Error: Could not receive message from server");
+        exit(1);
+    } else{
+        printf("Groups:\n%s\n", msg.string);
+    }
+    return 1;
+}
+
 int main(int argc, char* argv[]){
     int main_queue_id = msgget(MAIN_QUEUE_HEX, 0666 | IPC_CREAT);
     if (main_queue_id == -1){
@@ -88,7 +104,10 @@ int main(int argc, char* argv[]){
     while (1){
         printf("1. Logout and exit\n");
         printf("2. Check logged in users\n");
+        printf("3. Check groups\n");
+        printf("Enter action: ");
         scanf("%d", &action);
+        printf("\n");
         switch (action){
             case 1:
                 logout_procedure(private_queue_id);
@@ -96,6 +115,9 @@ int main(int argc, char* argv[]){
                 break;
             case 2:
                 check_loggedin_users(private_queue_id);
+                break;
+            case 3:
+                check_groups(private_queue_id);
                 break;
             default:
                 printf("Invalid action\n");

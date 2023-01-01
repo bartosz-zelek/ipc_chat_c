@@ -1,0 +1,23 @@
+# install extension in vscode "Todo+ and Todo Highlight"
+
+Funkcje realizowane przez klienta:
+  1. Obsługa konta użytkownika:
+    ✔ zalogowanie @done(23-01-01 19:57)
+    ✔ wylogowanie @done(23-01-01 19:57)
+    • podgląd listy:
+      ✔ zalogowanych użytkowników @done(23-01-01 19:57)
+      ☐ zapisanych do danej grupy tematycznej
+  2. Obsługa grup tematycznych:
+    ☐ zapisanie się do grupy
+    ☐ wypisanie się z grupy
+    ✔ podgląd listy dostępnych grup @done(23-01-01 22:51)
+  3. Wiadomości:
+    ☐ wysłanie wiadomości do grupy
+    ☐ wysłanie wiadomości do użytkownika
+    ☐ odebranie wiadomości
+  Funkcje realizowane przez serwer:
+    ✔ tworzenie użytkowników i grup tematycznych na podstawie pliku konfiguracyjnego (w gotowym rozwiązaniu należy dostarczyć plik konfiguracyjny tworzący konta dla 3 grup (group[1-3]) i dziewięciu użytkowników (test[1-9])) @done(23-01-01 19:57)
+    ☐ przesyłanie wiadomości otrzymanych od klienta/klientów do adresata/adresatów
+    ☐ potwierdzenia wykonania/odrzucenia żądania przez serwer
+  Funkcjonalność dodatkowa:
+    ☐ zablokowanie możliwości odbioru wiadomości (z grupy, od użytkownika) i informacja o nieudanych próbach logowania / blokowanie konta po k próbach

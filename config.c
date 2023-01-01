@@ -42,7 +42,7 @@ char** read_section(const char* filename, const char* section){
             }
         }
         if (boolSpecificSection == 1){ // Start reading users
-            records[recordIndex] = malloc(sizeof(line));
+            records[recordIndex] = malloc(sizeof(char) * MAX_LINE_LENGTH);
             strcpy(records[recordIndex], line);
             records[recordIndex][strlen(line)-1] = '\0'; // Remove new line character
             recordIndex++;
