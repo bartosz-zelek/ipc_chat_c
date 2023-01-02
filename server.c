@@ -52,6 +52,7 @@ int are_credentials_valid(char* username, char* password, UserData** users_data)
     return 0;
 }
 
+// array of GroupData* elements, where name and usernames are set
 GroupData** read_groups_data_from_config(){
     char** groups_users = read_section(CONFIG_FILE, "GROUPS:");
     GroupData** groups_data = malloc(sizeof(GroupData*) * MAX_GROUPS+1);
@@ -98,16 +99,16 @@ void catch_and_perform_login_action(int main_queue_id, UserData** users_data, Us
             printf("Kolejka prywatna: %d dla usera: %d\n", server_process_queue, tmp_user.pid);
             if (server_process_queue == -1){
                 perror("Error: Could not create new queue");
-                exit(1);
+                // exit(1);
             }
 
-            LoginResponse response;
+            SuccessResponse response;
             response.mtype = tmp_user.pid;
             response.success = 1;
 
-            if (msgsnd(main_queue_id, &response, sizeof(LoginResponse)-sizeof(long), 0) == -1){
+            if (msgsnd(main_queue_id, &response, sizeof(SuccessResponse)-sizeof(long), 0) == -1){
                 perror("Error: Could not send response to client");
-                exit(1);
+                // exit(1);
             }
 
             // add user to pairs_user_queueid
@@ -120,12 +121,12 @@ void catch_and_perform_login_action(int main_queue_id, UserData** users_data, Us
 
 
         } else {
-            LoginResponse response;
+            SuccessResponse response;
             response.mtype = tmp_user.pid;
             response.success = 0;
-            if (msgsnd(main_queue_id, &response, sizeof(LoginResponse)-sizeof(long), 0) == -1){
+            if (msgsnd(main_queue_id, &response, sizeof(SuccessResponse)-sizeof(long), 0) == -1){
                 perror("Error: Could not send response to client");
-                exit(1);
+                // exit(1);
             }
             printf("User %s failed to log in\n", tmp_user.username);
         }
@@ -166,7 +167,7 @@ void catch_and_perform_check_loggedin_users_action(UserData** logged_users){
                 msg.mtype = PROT_CHECK_LOGGEDIN_RESPONSE;
                 if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
                     perror("Error: Could not send response to client");
-                    exit(1);
+                    // exit(1);
                 }
             }
         }
@@ -190,7 +191,50 @@ void catch_and_perform_check_groups_action(GroupData** groups_data, UserData** l
                 msg.mtype = PROT_CHECK_GROUPS_RESPONSE;
                 if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
                     perror("Error: Could not send response to client");
-                    exit(1);
+                    // exit(1);
+                }
+            }
+        }
+    }
+}
+
+void catch_and_perform_check_users_in_group_action(GroupData** groups_data, UserData** logged_users){
+    Message msg;
+    char group_name[MAX_GROUP_NAME_LENGTH];
+    for (int i=0; i<MAX_USERS; i++){
+        if (logged_users[i] != NULL){
+            if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message)-sizeof(long), PROT_CHECK_USERS_IN_GROUP_REQUEST, IPC_NOWAIT) != -1){
+                strcpy(group_name, msg.string);
+                memset(msg.string, 0, sizeof(msg.string));
+
+                int j;
+                for (j=0; j<MAX_GROUPS; j++){
+                    if (groups_data[j] != NULL){
+                        if (strcmp(groups_data[j]->name, group_name) == 0){
+                            for (int k=0; k<MAX_USERS; k++){
+                                if (groups_data[j]->usernames[k] != NULL){
+                                    strcat(msg.string, groups_data[j]->usernames[k]);
+                                    strcat(msg.string, "\n");
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (j == MAX_GROUPS){
+                    printf("Group %s does not exist\n", group_name);
+                    strcat(msg.string, "This group does not exist\n");
+                } else if(msg.string[0] == '\0'){
+                    printf("Group %s is empty\n", group_name);
+                    strcat(msg.string, "This group is empty\n");
+                }
+
+                printf("Sending list of group members to user %s\n", logged_users[i]->username);
+                msg.mtype = PROT_CHECK_USERS_IN_GROUP_RESPONSE;
+                if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
+                    perror("Error: Could not send response to client");
+                    // exit(1);
                 }
             }
         }
@@ -217,6 +261,8 @@ int main(int argc, char* argv[]){
         catch_and_perform_check_loggedin_users_action(logged_users);
 
         catch_and_perform_check_groups_action(groups_data, logged_users);
+
+        catch_and_perform_check_users_in_group_action(groups_data, logged_users);
     }
 
     return 0;

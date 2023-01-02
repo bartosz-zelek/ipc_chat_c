@@ -14,6 +14,8 @@
 #define PROT_CHECK_LOGGEDIN_RESPONSE 4
 #define PROT_CHECK_GROUPS_REQUEST 5
 #define PROT_CHECK_GROUPS_RESPONSE 6
+#define PROT_CHECK_USERS_IN_GROUP_REQUEST 7
+#define PROT_CHECK_USERS_IN_GROUP_RESPONSE 8
 
 #define CONFIG_FILE "config.txt"
 
@@ -32,4 +34,4 @@ typedef struct{
 typedef struct {
     long mtype;
     int success;
-} LoginResponse;
+} SuccessResponse;

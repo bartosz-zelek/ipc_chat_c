@@ -10,5 +10,5 @@
     1.4 Private queue is created for every logged in user and its id is pid of client's process
 3. Login
     1.1 Client is sending credentials to server in the main queue (mtype=PROT_LOGIN)
-    1.2 Server checks if credentials are valid and send a LoginResponse in the main queue (mtype=pid of specific client) with success equal to 0 or 1
+    1.2 Server checks if credentials are valid and send a SuccessResponse in the main queue (mtype=pid of specific client) with success equal to 0 or 1
     1.3 If server comunicates with client about some specific action e.g. checking list of logged in users, they must differentiate request and response (there is possibility, that one procces would send and get the same data)

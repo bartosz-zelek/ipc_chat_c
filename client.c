@@ -25,22 +25,22 @@ int login_procedure(int main_queue_id, User* user_arg){
 
     if (msgsnd(main_queue_id, &user, sizeof(User)-sizeof(long), 0) == -1){
         perror("Error: Could not send message to server");
-        exit(1);
+        // exit(1);
     }
 
-    LoginResponse response;
-    if (msgrcv(main_queue_id, &response, sizeof(LoginResponse)-sizeof(long), getpid(), 0) == -1){
+    SuccessResponse response;
+    if (msgrcv(main_queue_id, &response, sizeof(SuccessResponse)-sizeof(long), getpid(), 0) == -1){
         perror("Error: Could not receive message from server");
-        exit(1);
+        // exit(1);
     }
     if (response.success){
-        printf("Login successful\n");
+        printf("Login successful\n\n");
         user_arg->pid = user.pid;
         strcpy(user_arg->username, user.username);
         strcpy(user_arg->password, user.password);
         return 1;
     } else {
-        printf("Login failed\n");
+        printf("Login failed\n\n");
         return 0;
     }
 }
@@ -51,7 +51,7 @@ int logout_procedure(int private_queue_id){
     user.pid = getpid();
     if (msgsnd(private_queue_id, &user, sizeof(user)-sizeof(long), 0) == -1){
         perror("Error: Could not send message to server");
-        exit(1);
+        // exit(1);
     }
     return 1;
 }
@@ -61,11 +61,11 @@ int check_loggedin_users(int private_queue_id){
     msg.mtype = PROT_CHECK_LOGGEDIN_REQUEST;
     if (msgsnd(private_queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
         perror("Error: Could not send message to server");
-        exit(1);
+        // exit(1);
     }
     if (msgrcv(private_queue_id, &msg, sizeof(Message)-sizeof(long), PROT_CHECK_LOGGEDIN_RESPONSE, 0) == -1){
         perror("Error: Could not receive message from server");
-        exit(1);
+        // exit(1);
     } else{
         printf("Logged in users:\n%s\n", msg.string);
     }
@@ -77,13 +77,33 @@ int check_groups(int private_queue_id){
     msg.mtype = PROT_CHECK_GROUPS_REQUEST;
     if (msgsnd(private_queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
         perror("Error: Could not send message to server");
-        exit(1);
+        // exit(1);
     }
     if (msgrcv(private_queue_id, &msg, sizeof(Message)-sizeof(long), PROT_CHECK_GROUPS_RESPONSE, 0) == -1){
         perror("Error: Could not receive message from server");
-        exit(1);
+        // exit(1);
     } else{
         printf("Groups:\n%s\n", msg.string);
+    }
+    return 1;
+}
+
+int check_users_in_group(int private_queue_id){
+    char group_name[MAX_GROUP_NAME_LENGTH];
+    printf("Enter group name: ");
+    scanf("%s", group_name);
+    Message msg;
+    msg.mtype = PROT_CHECK_USERS_IN_GROUP_REQUEST;
+    strcpy(msg.string, group_name);
+    if (msgsnd(private_queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
+        perror("Error: Could not send message to server");
+        // exit(1);
+    }
+    if (msgrcv(private_queue_id, &msg, sizeof(Message)-sizeof(long), PROT_CHECK_USERS_IN_GROUP_RESPONSE, 0) == -1){
+        perror("Error: Could not receive message from server");
+        // exit(1);
+    } else{
+        printf("Users in group %s:\n%s\n", group_name, msg.string);
     }
     return 1;
 }
@@ -105,6 +125,7 @@ int main(int argc, char* argv[]){
         printf("1. Logout and exit\n");
         printf("2. Check logged in users\n");
         printf("3. Check groups\n");
+        printf("4. Check users in group\n");
         printf("Enter action: ");
         scanf("%d", &action);
         printf("\n");
@@ -118,6 +139,9 @@ int main(int argc, char* argv[]){
                 break;
             case 3:
                 check_groups(private_queue_id);
+                break;
+            case 4:
+                check_users_in_group(private_queue_id);
                 break;
             default:
                 printf("Invalid action\n");
