@@ -58,9 +58,11 @@ GroupData** read_groups_data_from_config(){
     GroupData** groups_data = malloc(sizeof(GroupData*) * MAX_GROUPS+1);
     int i;
     for (i=0; groups_users[i] != NULL; i++){
-        // memset(groups_data[i]->usernames, 0, sizeof(groups_data[i]->usernames));
         char* group_name = strtok(groups_users[i], " ");
+
         groups_data[i] = malloc(sizeof(GroupData));
+        memset(groups_data[i]->usernames, 0, sizeof(groups_data[i]->usernames));
+
         strcpy(groups_data[i]->name, group_name);
         int j = 0;
         while (group_name != NULL){
@@ -241,6 +243,51 @@ void catch_and_perform_check_users_in_group_action(GroupData** groups_data, User
     }
 }
 
+void catch_and_perform_enroll_to_group_action(GroupData** groups_data, UserData** logged_users){
+    Message msg;
+    char group_name[MAX_GROUP_NAME_LENGTH];
+    for (int i=0; i<MAX_USERS; i++){
+        if (logged_users[i] != NULL){
+            if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message)-sizeof(long), PROT_ENROLL_TO_GROUP_REQUEST, IPC_NOWAIT) != -1){
+                strcpy(group_name, msg.string);
+                memset(msg.string, 0, sizeof(msg.string));
+
+                int j, l=-1; // l is index for new user to be save; j is for choosed group; i is for user who sent request
+                for (j=0; j<MAX_GROUPS; j++){
+                    if (groups_data[j] != NULL){
+                        if (strcmp(groups_data[j]->name, group_name) == 0){
+                            for (int k=0; k<MAX_USERS; k++){
+                                if (groups_data[j]->usernames[k] != NULL && strcmp(logged_users[i]->username, groups_data[j]->usernames[k]) == 0) {// check if user is already enrolled in this group
+                                    printf("User is already enrolled in this group.\n");
+                                    l=-1;
+                                    break;
+                                }
+                                if (groups_data[j]->usernames[k] == NULL && l == -1){ // found place to save user, but don't break - check if already enrolled
+                                    l = k;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (l != -1){ // found place to save user's username, and user is not already enrolled in group
+                    groups_data[j]->usernames[l] = malloc(sizeof(char)*MAX_USERNAME_LENGTH);
+                    strcpy(groups_data[j]->usernames[l], logged_users[i]->username);
+                    strcpy(msg.string, "Succesfully enrolled user to the group.\n");
+                } else{
+                    strcpy(msg.string, "User is already enrolled in this group.\n");
+                }
+
+                msg.mtype = PROT_ENROLL_TO_GROUP_RESPONSE;
+                if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1){
+                    perror("Error: Could not send response to client");
+                }
+            }
+        }
+    }
+}
+
 int main(int argc, char* argv[]){
     int main_queue_id = msgget(MAIN_QUEUE_HEX, 0666 | IPC_CREAT);
     printf("Kolejka publiczna: %d\n", main_queue_id);
@@ -263,6 +310,8 @@ int main(int argc, char* argv[]){
         catch_and_perform_check_groups_action(groups_data, logged_users);
 
         catch_and_perform_check_users_in_group_action(groups_data, logged_users);
+
+        catch_and_perform_enroll_to_group_action(groups_data, logged_users);
     }
 
     return 0;
