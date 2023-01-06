@@ -126,6 +126,24 @@ int enroll_to_group(int private_queue_id){
     return 1;
 }
 
+int unenroll_from_group(int private_queue_id){
+    char group_name[MAX_GROUP_NAME_LENGTH];
+    printf("Enter group name: ");
+    scanf("%s", group_name);
+    Message msg;
+    msg.mtype = PROT_UNENROLL_FROM_GROUP_REQUEST;
+    strcpy(msg.string, group_name);
+    if (msgsnd(private_queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1){
+        perror("Error: Could not send message to server");
+    }
+    if (msgrcv(private_queue_id, &msg, sizeof(Message) - sizeof(long), PROT_UNENROLL_FROM_GROUP_RESPONSE, 0) == -1){
+        perror("Error: Could not recieve message from server");
+    } else{
+        printf("\n%s\n", msg.string);
+    }
+    return 1;
+}
+
 int main(int argc, char* argv[]){
     int main_queue_id = msgget(MAIN_QUEUE_HEX, 0666 | IPC_CREAT);
     if (main_queue_id == -1){
@@ -145,6 +163,7 @@ int main(int argc, char* argv[]){
         printf("3. Check groups\n");
         printf("4. Check users in group\n");
         printf("5. Enroll to group\n");
+        printf("6. Unenroll from group\n");
         printf("Enter action: ");
         scanf("%d", &action);
         printf("\n");
@@ -164,6 +183,9 @@ int main(int argc, char* argv[]){
                 break;
             case 5:
                 enroll_to_group(private_queue_id);
+                break;
+            case 6:
+                unenroll_from_group(private_queue_id);
                 break;
             default:
                 printf("Invalid action\n");

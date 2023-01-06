@@ -275,8 +275,10 @@ void catch_and_perform_enroll_to_group_action(GroupData** groups_data, UserData*
                     groups_data[j]->usernames[l] = malloc(sizeof(char)*MAX_USERNAME_LENGTH);
                     strcpy(groups_data[j]->usernames[l], logged_users[i]->username);
                     strcpy(msg.string, "Succesfully enrolled user to the group.\n");
-                } else{
+                } else if (j != MAX_GROUPS){ // found such group, but user is enrolled
                     strcpy(msg.string, "User is already enrolled in this group.\n");
+                } else{ // not found such group
+                    strcpy(msg.string, "This group does not exist\n");
                 }
 
                 msg.mtype = PROT_ENROLL_TO_GROUP_RESPONSE;
@@ -288,6 +290,52 @@ void catch_and_perform_enroll_to_group_action(GroupData** groups_data, UserData*
     }
 }
 
+void catch_and_perform_unenroll_from_group_action(GroupData** groups_data, UserData** logged_users){
+    Message msg;
+    char group_name[MAX_GROUP_NAME_LENGTH];
+    for (int i=0; i<MAX_USERS; i++){
+        if (logged_users[i] != NULL){
+            if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message)-sizeof(long), PROT_UNENROLL_FROM_GROUP_REQUEST, IPC_NOWAIT) != -1){
+                strcpy(group_name, msg.string);
+                memset(msg.string, 0, sizeof(msg.string));
+
+                int k, j; // k is index of user's username, if user is not in this group k=MAX_USERS; j is index of group, j=MAX_GROUPS if not found
+                for (j=0; j<MAX_GROUPS; j++){
+                    if (groups_data[j] != NULL){
+                        if (strcmp(groups_data[j]->name, group_name) == 0){
+                            for (k=0; k<MAX_USERS; k++){
+                                if (groups_data[j]->usernames[k] != NULL && strcmp(groups_data[j]->usernames[k], logged_users[i]->username) == 0){
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                if (j != MAX_GROUPS){ // found such group
+                    if (k != MAX_USERS){ // user has been found in this group
+                        free(groups_data[j]->usernames[k]);
+                        groups_data[j]->usernames[k] = NULL;
+                        strcpy(msg.string, "User has been unenrolled from the group.\n");
+                        printf("User has been unenrolled from the group.\n");
+                    } else{ // user hasn't been found in this group
+                        printf("User is absent in this group.\n");
+                        strcpy(msg.string, "User is absent in this group.\n");
+                    }
+                } else{ // not found such group
+                    printf("This group does not exist\n");
+                    strcpy(msg.string, "This group does not exist\n");
+                }
+
+                msg.mtype = PROT_UNENROLL_FROM_GROUP_RESPONSE;
+                if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1){
+                    perror("Error: Could not send response to client");
+                }
+            }
+        }
+    }
+}
 int main(int argc, char* argv[]){
     int main_queue_id = msgget(MAIN_QUEUE_HEX, 0666 | IPC_CREAT);
     printf("Kolejka publiczna: %d\n", main_queue_id);
@@ -312,6 +360,8 @@ int main(int argc, char* argv[]){
         catch_and_perform_check_users_in_group_action(groups_data, logged_users);
 
         catch_and_perform_enroll_to_group_action(groups_data, logged_users);
+
+        catch_and_perform_unenroll_from_group_action(groups_data, logged_users);
     }
 
     return 0;
