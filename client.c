@@ -10,8 +10,10 @@
 
 // login user and save user data in user_arg
 int login_procedure(int main_queue_id, User* user_arg){
-    char* username = malloc(sizeof(char) * MAX_USERNAME_LENGTH);
-    char* password = malloc(sizeof(char) * MAX_PASSWORD_LENGTH);
+    // char* username = malloc(sizeof(char) * MAX_USERNAME_LENGTH);
+    // char* password = malloc(sizeof(char) * MAX_PASSWORD_LENGTH);
+    char username[MAX_USERNAME_LENGTH];
+    char password[MAX_PASSWORD_LENGTH];
     printf("Enter username: ");
     scanf("%s", username);
     printf("Enter password: ");
@@ -144,6 +146,27 @@ void unenroll_from_group(int private_queue_id){
         perror("Error: Could not send message to server");
     }
     if (msgrcv(private_queue_id, &msg, sizeof(Message) - sizeof(long), PROT_UNENROLL_FROM_GROUP_RESPONSE, 0) == -1){
+        perror("Error: Could not recieve message from server");
+    } else{
+        printf("\n%s\n", msg.string);
+    }
+}
+
+void set_message_to_user(char *user, int private_queue_id)
+{
+    printf("Enter content of the message:\n");
+    char mess[MAX_MESSAGE_LENGTH];
+    scanf("%s", mess);
+    // printf("Enter user to which you want to send message to:\n");
+    // char user[MAX_USERNAME_LENGTH];
+    // scanf("%s", user);
+    Message msg;
+    msg.mtype = PROT_SEND_MESSAGE_TO_USER;
+    strcpy(msg.string, mess);
+    if (msgsnd(private_queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1){
+        perror("Error: Could not send message to server");
+    }
+    if (msgrcv(private_queue_id, &msg, sizeof(Message) - sizeof(long), PROT_SEND_MESSAGE_TO_USER_RESPONSE,  0) == -1){
         perror("Error: Could not recieve message from server");
     } else{
         printf("\n%s\n", msg.string);
