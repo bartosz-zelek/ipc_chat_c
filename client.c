@@ -45,7 +45,7 @@ int login_procedure(int main_queue_id, User* user_arg){
     }
 }
 
-int logout_procedure(int private_queue_id){
+void logout_procedure(int private_queue_id){
     User user;
     user.mtype = PROT_LOGOUT;
     user.pid = getpid();
@@ -53,10 +53,9 @@ int logout_procedure(int private_queue_id){
         perror("Error: Could not send message to server");
         // exit(1);
     }
-    return 1;
 }
 
-int check_loggedin_users(int private_queue_id){
+char* check_loggedin_users(int private_queue_id){
     Message msg;
     msg.mtype = PROT_CHECK_LOGGEDIN_REQUEST;
     if (msgsnd(private_queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
@@ -66,13 +65,16 @@ int check_loggedin_users(int private_queue_id){
     if (msgrcv(private_queue_id, &msg, sizeof(Message)-sizeof(long), PROT_CHECK_LOGGEDIN_RESPONSE, 0) == -1){
         perror("Error: Could not receive message from server");
         // exit(1);
-    } else{
-        printf("Logged in users:\n%s\n", msg.string);
     }
-    return 1;
+    // else{
+    //     printf("Logged in users:\n%s\n", msg.string);
+    // }
+    char* users = malloc(sizeof(char) * MAX_MESSAGE_LENGTH);
+    strcpy(users, msg.string);
+    return users;
 }
 
-int check_groups(int private_queue_id){
+char* check_groups(int private_queue_id){
     Message msg;
     msg.mtype = PROT_CHECK_GROUPS_REQUEST;
     if (msgsnd(private_queue_id, &msg, sizeof(Message)-sizeof(long), 0) == -1){
@@ -82,13 +84,16 @@ int check_groups(int private_queue_id){
     if (msgrcv(private_queue_id, &msg, sizeof(Message)-sizeof(long), PROT_CHECK_GROUPS_RESPONSE, 0) == -1){
         perror("Error: Could not receive message from server");
         // exit(1);
-    } else{
-        printf("Groups:\n%s\n", msg.string);
     }
-    return 1;
+    // else{
+    //     printf("Groups:\n%s\n", msg.string);
+    // }
+    char* groups = malloc(sizeof(char) * MAX_MESSAGE_LENGTH);
+    strcpy(groups, msg.string);
+    return groups;
 }
 
-int check_users_in_group(int private_queue_id){
+char* check_users_in_group(int private_queue_id){
     char group_name[MAX_GROUP_NAME_LENGTH];
     printf("Enter group name: ");
     scanf("%s", group_name);
@@ -102,13 +107,16 @@ int check_users_in_group(int private_queue_id){
     if (msgrcv(private_queue_id, &msg, sizeof(Message)-sizeof(long), PROT_CHECK_USERS_IN_GROUP_RESPONSE, 0) == -1){
         perror("Error: Could not receive message from server");
         // exit(1);
-    } else{
-        printf("Users in group %s:\n%s\n", group_name, msg.string);
     }
-    return 1;
+    // else{
+    //     printf("Users in group %s:\n%s\n", group_name, msg.string);
+    // }
+    char* users = malloc(sizeof(char) * MAX_MESSAGE_LENGTH);
+    strcpy(users, msg.string);
+    return users;
 }
 
-int enroll_to_group(int private_queue_id){
+void enroll_to_group(int private_queue_id){
     char group_name[MAX_GROUP_NAME_LENGTH];
     printf("Enter group name: ");
     scanf("%s", group_name);
@@ -120,13 +128,12 @@ int enroll_to_group(int private_queue_id){
     }
     if (msgrcv(private_queue_id, &msg, sizeof(Message) - sizeof(long), PROT_ENROLL_TO_GROUP_RESPONSE, 0) == -1){
         perror("Error: Could not recieve message from server");
-    } else{
+    }else{
         printf("\n%s\n", msg.string);
     }
-    return 1;
 }
 
-int unenroll_from_group(int private_queue_id){
+void unenroll_from_group(int private_queue_id){
     char group_name[MAX_GROUP_NAME_LENGTH];
     printf("Enter group name: ");
     scanf("%s", group_name);
@@ -141,7 +148,6 @@ int unenroll_from_group(int private_queue_id){
     } else{
         printf("\n%s\n", msg.string);
     }
-    return 1;
 }
 
 int main(int argc, char* argv[]){
@@ -173,13 +179,13 @@ int main(int argc, char* argv[]){
                 exit(0);
                 break;
             case 2:
-                check_loggedin_users(private_queue_id);
+                printf("Logged in users:\n%s\n", check_loggedin_users(private_queue_id));
                 break;
             case 3:
-                check_groups(private_queue_id);
+                printf("Groups:\n%s\n", check_groups(private_queue_id));
                 break;
             case 4:
-                check_users_in_group(private_queue_id);
+                printf("Users in group:\n%s\n", check_users_in_group(private_queue_id));
                 break;
             case 5:
                 enroll_to_group(private_queue_id);
