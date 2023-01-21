@@ -121,7 +121,6 @@ int is_user_loggedin(char* username, UserData** logged_users){
 }
 
 void catch_and_perform_login_action(int main_queue_id, UserData** users_data, UserData** logged_users, UnsuccessfulLoginAttempt** unsuccessful_login_attempts){
-    // TODO: don't let log in if user is already logged in (same username)
     User tmp_user;
 
     if (msgrcv(main_queue_id, &tmp_user, sizeof(User)-sizeof(long), PROT_LOGIN, IPC_NOWAIT) != -1){ // check if someone is trying to log in (public queue)
