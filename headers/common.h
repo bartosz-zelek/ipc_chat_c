@@ -44,3 +44,9 @@ typedef struct {
     int success;
     char string[MAX_MESSAGE_LENGTH];
 } SuccessResponse;
+
+typedef struct {
+    long mtype;
+    char user[MAX_USERNAME_LENGTH];
+    char msg[MAX_MESSAGE_LENGTH];
+} Message_to_user;

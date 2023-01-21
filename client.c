@@ -150,25 +150,42 @@ void unenroll_from_group(int private_queue_id){
     }
 }
 
-void set_message_to_user(char *user, int private_queue_id)
+void send_message_to_user(int private_queue_id)
 {
     printf("Enter content of the message:\n");
     char mess[MAX_MESSAGE_LENGTH];
     scanf("%s", mess);
-    // printf("Enter user to which you want to send message to:\n");
-    // char user[MAX_USERNAME_LENGTH];
-    // scanf("%s", user);
-    Message msg;
+    printf("Enter user to which you want to send message to:\n");
+    char user[MAX_USERNAME_LENGTH];
+    scanf("%s", user);
+    Message_to_user msg;
     msg.mtype = PROT_SEND_MESSAGE_TO_USER;
-    strcpy(msg.string, mess);
-    if (msgsnd(private_queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1){
+    strcpy(msg.msg, mess);
+    strcpy(msg.user, user);
+    //Message response;
+    if (msgsnd(private_queue_id, &msg, sizeof(Message_to_user) - sizeof(long), 0) == -1){
         perror("Error: Could not send message to server");
     }
-    if (msgrcv(private_queue_id, &msg, sizeof(Message) - sizeof(long), PROT_SEND_MESSAGE_TO_USER_RESPONSE,  0) == -1){
-        perror("Error: Could not recieve message from server");
-    } else{
-        printf("\n%s\n", msg.string);
+    // if (msgrcv(private_queue_id, &response, sizeof(Message) - sizeof(long), PROT_SEND_MESSAGE_TO_USER_RESPONSE,  0) == -1){
+    //     perror("Error: Could not recieve message from server");
+    // } else{
+    //     printf("\n%s\n", response.string);
+    // }
+}
+
+void receive_message_from_user(int private_queue_id)
+{
+    Message_to_user msg;
+    if (msgrcv(private_queue_id, &msg,sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_USER_RESPONSE, 0) != -1)
+    {
+        printf("User %s sent you a message:\n%s", msg.user, msg.msg);
     }
+}
+
+void send_message_to_group(int private_queue_id)
+{
+    printf("Enter group name:");
+    char group_name[MAX_GROUP_NAME_LENGTH];
 }
 
 int main(int argc, char* argv[]){

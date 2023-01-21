@@ -406,6 +406,47 @@ void catch_and_perform_unenroll_from_group_action(GroupData** groups_data, UserD
         }
     }
 }
+
+void catch_and_perform_send_message_to_user_action(UserData** logged_users)
+{
+    Message_to_user msg_to_user;
+    // char user_name[MAX_USERNAME_LENGTH];
+    // char message[MAX_MESSAGE_LENGTH];
+    
+    for (int i = 0; i < MAX_USERS; i++)
+    {
+        if (logged_users[i] != NULL)
+        {
+            if (msgrcv(logged_users[i] -> queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_USER, IPC_NOWAIT) != -1)
+            {
+                for (int j = 0; j < MAX_USERS; j++)
+                {
+                    if (/*j != i && */logged_users[j] != NULL && (strcmp(logged_users[j] -> username, msg_to_user.user) == 0))
+                    {
+                        printf("Sending message from %s to %s\n", logged_users[i] -> username, msg_to_user.user);
+
+                        // Sending message to destined user, chaning user in order to show who sent message
+                        strcpy(msg_to_user.user, logged_users[i] -> username);
+                        if (msgsnd(logged_users[j] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                        {
+                            perror("Couldn't send message to destined user");
+                        }
+
+                        // Sending feedback info to sender, dunno if needed
+                        // strcpy(msg_to_user.msg, "Message sent succcesfully"); 
+                        // if (msgsnd(logged_users[i] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                        // {
+                        //     perror("Couldn't send feedback message to orignal user");
+                        // }
+                        return;
+                    }
+                }
+
+            }
+        }
+    }
+}
+
 int main(int argc, char* argv[]){
     int main_queue_id = msgget(MAIN_QUEUE_HEX, 0666 | IPC_CREAT);
     printf("Kolejka publiczna: %d\n", main_queue_id);
