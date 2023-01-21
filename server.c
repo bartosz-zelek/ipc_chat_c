@@ -22,6 +22,13 @@ typedef struct{
     char* usernames[MAX_USERS+1];
 } GroupData;
 
+typedef struct{
+    char username[MAX_USERNAME_LENGTH];
+    int attempts;
+} UnsuccessfulLoginAttempt;
+
+
+
 // returns array with UserData* elements, where only username and password are set
 UserData** read_users_data_from_config(){
     char** users_with_passwords = read_section(CONFIG_FILE, "USERS:");
@@ -85,16 +92,45 @@ GroupData** read_groups_data_from_config(){
     return groups_data;
 }
 
-void catch_and_perform_login_action(int main_queue_id, UserData** users_data, UserData** logged_users){
+int is_user_blocked(char* username, UnsuccessfulLoginAttempt** unsuccessful_login_attempts){
+    for (int i=0; unsuccessful_login_attempts[i] != NULL && i<MAX_USERS; i++){
+        if (strcmp(unsuccessful_login_attempts[i]->username, username) == 0){
+            if (unsuccessful_login_attempts[i]->attempts >= MAX_UNSUCCESSFUL_LOGIN_ATTEMPTS){
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+void reset_unsuccessful_login_attempts(char* username, UnsuccessfulLoginAttempt** unsuccessful_login_attempts){
+    for (int i=0; unsuccessful_login_attempts[i] != NULL && i<MAX_USERS; i++){
+        if (strcmp(unsuccessful_login_attempts[i]->username, username) == 0){
+            unsuccessful_login_attempts[i]->attempts = 0;
+        }
+    }
+}
+
+int is_user_loggedin(char* username, UserData** logged_users){
+    for (int i=0; logged_users[i] != NULL && i<MAX_USERS; i++){
+        if (strcmp(logged_users[i]->username, username) == 0){
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void catch_and_perform_login_action(int main_queue_id, UserData** users_data, UserData** logged_users, UnsuccessfulLoginAttempt** unsuccessful_login_attempts){
     // TODO: don't let log in if user is already logged in (same username)
-    // TODO: take into account how many times user tried to log in (if more than X times, then block user [contact admin])
     User tmp_user;
 
     if (msgrcv(main_queue_id, &tmp_user, sizeof(User)-sizeof(long), PROT_LOGIN, IPC_NOWAIT) != -1){ // check if someone is trying to log in (public queue)
-        if (are_credentials_valid(tmp_user.username, tmp_user.password, users_data)){
+        if (are_credentials_valid(tmp_user.username, tmp_user.password, users_data) && !is_user_blocked(tmp_user.username, unsuccessful_login_attempts) && !is_user_loggedin(tmp_user.username, logged_users)){
             // user is valid
             // create new queue for this user
             // new queue id = tmp_user.pid
+
+            reset_unsuccessful_login_attempts(tmp_user.username, unsuccessful_login_attempts);
 
             printf("User %s logged in\n", tmp_user.username);
             int server_process_queue = msgget(tmp_user.pid, 0666 | IPC_CREAT);
@@ -126,6 +162,41 @@ void catch_and_perform_login_action(int main_queue_id, UserData** users_data, Us
             SuccessResponse response;
             response.mtype = tmp_user.pid;
             response.success = 0;
+
+            if (is_user_loggedin(tmp_user.username, logged_users)){
+                strcpy(response.string, "User already logged in");
+            } else{
+                // -- CHECK UNSUCCESSFUL LOGIN ATTEMPTS --
+                memset(response.string, 0, sizeof(response.string));
+                int i;
+                int bool_found_username = 0;
+                for (i=0; unsuccessful_login_attempts[i] != NULL && i<MAX_USERS; i++){
+                    if (strcmp(unsuccessful_login_attempts[i]->username, tmp_user.username) == 0){
+                        bool_found_username = 1;
+                        unsuccessful_login_attempts[i]->attempts++;
+                        if (unsuccessful_login_attempts[i]->attempts >= MAX_UNSUCCESSFUL_LOGIN_ATTEMPTS){
+                            printf("User %s blocked\n", tmp_user.username);
+                            response.success = 0;
+                            strcpy(response.string, "User blocked (too many unsuccessful login attempts - contact with administrator)" );
+                        }
+                        break;
+                    }
+                }
+                if (bool_found_username == 0){
+                    for (i=0; unsuccessful_login_attempts[i] != NULL && i<MAX_USERS; i++);
+                    unsuccessful_login_attempts[i] = (UnsuccessfulLoginAttempt*)malloc(sizeof(UnsuccessfulLoginAttempt));
+                    strcpy(unsuccessful_login_attempts[i]->username, tmp_user.username);
+                    unsuccessful_login_attempts[i]->attempts = 1;
+                }
+                if (strlen(response.string) == 0){ // it is not the best solution
+                    char msg[MAX_MESSAGE_LENGTH];
+
+                    snprintf(msg, sizeof(msg), "Unsuccessful attempts for user %s (%d/%d)", tmp_user.username, unsuccessful_login_attempts[i]->attempts, MAX_UNSUCCESSFUL_LOGIN_ATTEMPTS);
+                    strcpy(response.string, msg);
+                }
+                // -- CHECK UNSUCCESSFUL LOGIN ATTEMPTS --
+            }
+
             if (msgsnd(main_queue_id, &response, sizeof(SuccessResponse)-sizeof(long), 0) == -1){
                 perror("Error: Could not send response to client");
                 // exit(1);
@@ -347,9 +418,14 @@ int main(int argc, char* argv[]){
     UserData* logged_users[MAX_USERS] = {NULL}; // array of logged users - no one is logged in at the beginning
     UserData** users_from_config = read_users_data_from_config(); // array of users from config file - size is MAX_USERS+1 (last element is NULL)
     GroupData** groups_data = read_groups_data_from_config(); // array of groups from config file - size is MAX_GROUPS+1 (last element is NULL)
+    UnsuccessfulLoginAttempt** unsuccessful_login_attempts = malloc(sizeof(UnsuccessfulLoginAttempt*)*MAX_USERS); // array of unsuccessful login attempts - size is MAX_USERS
+
+    for (int i=0; i<MAX_USERS; i++){
+        unsuccessful_login_attempts[i] = NULL;
+    }
 
     while (1){
-        catch_and_perform_login_action(main_queue_id, users_from_config, logged_users);
+        catch_and_perform_login_action(main_queue_id, users_from_config, logged_users, unsuccessful_login_attempts);
 
         catch_and_perform_logout_action(logged_users);
 

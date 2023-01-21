@@ -21,4 +21,4 @@ Funkcje realizowane przez klienta:
     ☐ potwierdzenia wykonania/odrzucenia żądania przez serwer
   Funkcjonalność dodatkowa:
     ☐ zablokowanie możliwości odbioru wiadomości (z grupy, od użytkownika)
-    ☐ informacja o nieudanych próbach logowania / blokowanie konta po k próbach
+    ✔ informacja o nieudanych próbach logowania / blokowanie konta po k próbach @done(23-01-21 02:01)

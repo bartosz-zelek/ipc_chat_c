@@ -10,8 +10,6 @@
 
 // login user and save user data in user_arg
 int login_procedure(int main_queue_id, User* user_arg){
-    // char* username = malloc(sizeof(char) * MAX_USERNAME_LENGTH);
-    // char* password = malloc(sizeof(char) * MAX_PASSWORD_LENGTH);
     char username[MAX_USERNAME_LENGTH];
     char password[MAX_PASSWORD_LENGTH];
     printf("Enter username: ");
@@ -42,7 +40,7 @@ int login_procedure(int main_queue_id, User* user_arg){
         strcpy(user_arg->password, user.password);
         return 1;
     } else {
-        printf("Login failed\n\n");
+        printf("Login failed (%s)\n\n", response.string);
         return 0;
     }
 }

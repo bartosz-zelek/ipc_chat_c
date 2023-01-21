@@ -23,6 +23,8 @@
 #define PROT_SEND_MESSAGE_TO_USER 13
 #define PROT_SEND_MESSAGE_TO_USER_RESPONSE 14
 
+#define MAX_UNSUCCESSFUL_LOGIN_ATTEMPTS 3 // it must be <=9
+
 #define CONFIG_FILE "config.txt"
 
 typedef struct {
@@ -40,4 +42,5 @@ typedef struct{
 typedef struct {
     long mtype;
     int success;
+    char string[MAX_MESSAGE_LENGTH];
 } SuccessResponse;
