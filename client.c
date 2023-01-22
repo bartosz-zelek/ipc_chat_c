@@ -93,10 +93,10 @@ char* check_groups(int private_queue_id){
     return groups;
 }
 
-char* check_users_in_group(int private_queue_id){
-    char group_name[MAX_GROUP_NAME_LENGTH];
-    printf("Enter group name: ");
-    scanf("%s", group_name);
+char* check_users_in_group(int private_queue_id, char* group_name){
+    // char group_name[MAX_GROUP_NAME_LENGTH];
+    // printf("Enter group name: ");
+    // scanf("%s", group_name);
     Message msg;
     msg.mtype = PROT_CHECK_USERS_IN_GROUP_REQUEST;
     strcpy(msg.string, group_name);
@@ -150,18 +150,12 @@ void unenroll_from_group(int private_queue_id){
     }
 }
 
-void send_message_to_user(int private_queue_id)
+void send_message_to_user(int private_queue_id, char* username, char* mess)
 {
-    printf("Enter content of the message:\n");
-    char mess[MAX_MESSAGE_LENGTH];
-    scanf("%s", mess);
-    printf("Enter user to which you want to send message to:\n");
-    char user[MAX_USERNAME_LENGTH];
-    scanf("%s", user);
     Message_to_user msg;
     msg.mtype = PROT_SEND_MESSAGE_TO_USER_FROM;
     strcpy(msg.msg, mess);
-    strcpy(msg.user, user);
+    strcpy(msg.user, username);
     if (msgsnd(private_queue_id, &msg, sizeof(Message_to_user) - sizeof(long), 0) == -1){
         perror("Error: Could not send message to server");
     }
@@ -184,6 +178,34 @@ void receive_message_from_user(int private_queue_id)
     }
 }
 
+char** split_string_by_char(char* string, char div)
+{
+    
+    char **arr;
+
+    int i = 0;
+    char* username = strtok(string, &div);
+    while (username != NULL)
+    {
+        i++;
+        username = strtok(NULL , &div);
+    }
+
+    arr = (char**)malloc(i*sizeof(char*));
+
+    username = strtok(string, &div);
+
+    i = 0;
+    while (username != NULL)
+    {
+        arr[i] = username;
+        i++;
+        username = strtok(NULL, &div);
+    }
+
+    return arr;
+}
+
 void send_message_to_group(int private_queue_id)
 {
     printf("Enter message content:\n");
@@ -194,20 +216,37 @@ void send_message_to_group(int private_queue_id)
     scanf("%s", group_name);
     Message_to_user msg;
 
-    msg.mtype = PROT_SEND_MESSAGE_TO_GROUP;
-    strcpy(msg.msg, mess);
-    strcpy(msg.user, group_name);
-    if (msgsnd(private_queue_id, &msg, sizeof(Message_to_user) - sizeof(long), 0) == -1){
-        perror("Error: Could not send message to server");
-    }
-    if (msgrcv(private_queue_id, &msg, sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_GROUP_RESPONSE,  0) == -1)
+    char **users_in_group = split_string_by_char(check_users_in_group(private_queue_id,group_name), '\n');
+
+    //sizeof(users_in_group)/(sizeof(char) * MAX_USERNAME_LENGTH)
+    for (int i =0; i < 10; i++)
     {
-        perror("Error: Could not recieve message from server");
-    } 
-    else
-    {
-        printf("\n%s\n", msg.msg);
+        if (users_in_group[i] != NULL)
+        {
+            send_message_to_user(private_queue_id, users_in_group[i], mess);
+        }
+        else
+        {
+            break;
+        }
     }
+
+    free(users_in_group);
+
+    // msg.mtype = PROT_SEND_MESSAGE_TO_GROUP;
+    // strcpy(msg.msg, mess);
+    // strcpy(msg.user, group_name);
+    // if (msgsnd(private_queue_id, &msg, sizeof(Message_to_user) - sizeof(long), 0) == -1){
+    //     perror("Error: Could not send message to server");
+    // }
+    // if (msgrcv(private_queue_id, &msg, sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_GROUP_RESPONSE,  0) == -1)
+    // {
+    //     perror("Error: Could not recieve message from server");
+    // } 
+    // else
+    // {
+    //     printf("\n%s\n", msg.msg);
+    // }
 }
 
 // void print_string_divided_by_char(char div, char *string)
@@ -238,7 +277,6 @@ int main(int argc, char* argv[]){
         printf("6. Unenroll from group\n");
         printf("7. Send message to user\n");
         printf("8. Send message to group\n");
-        //printf("8. Check your messages\n");
         printf("Enter action: ");
         int err;
         do
@@ -264,7 +302,10 @@ int main(int argc, char* argv[]){
                 printf("Groups:\n%s\n", check_groups(private_queue_id));
                 break;
             case 4:
-                printf("Users in group:\n%s\n", check_users_in_group(private_queue_id));
+                char group_name[MAX_GROUP_NAME_LENGTH];
+                printf("Enter group name: ");
+                scanf("%s", group_name);
+                printf("Users in group:\n%s\n", check_users_in_group(private_queue_id, group_name));
                 break;
             case 5:
                 enroll_to_group(private_queue_id);
@@ -273,7 +314,13 @@ int main(int argc, char* argv[]){
                 unenroll_from_group(private_queue_id);
                 break;
             case 7:
-                send_message_to_user(private_queue_id);
+                printf("Enter user to which you want to send message to:\n");
+                char user[MAX_USERNAME_LENGTH];
+                scanf("%s", user);
+                printf("Enter content of the message:\n");
+                char mess[MAX_MESSAGE_LENGTH];
+                scanf("%s", mess);
+                send_message_to_user(private_queue_id, user, mess);
                 break;
             case 8:
                 send_message_to_group(private_queue_id);

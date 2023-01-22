@@ -557,7 +557,7 @@ int main(int argc, char* argv[]){
 
         catch_and_perform_send_message_to_user_action(logged_users);
 
-        catch_and_perform_send_message_to_group(logged_users, groups_data, main_queue_id);
+        //catch_and_perform_send_message_to_group(logged_users, groups_data, main_queue_id);
     }
 
     return 0;

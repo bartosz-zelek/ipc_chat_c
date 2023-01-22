@@ -7,6 +7,7 @@
 #define MAX_GROUP_NAME_LENGTH 32
 #define MAX_GROUPS 10
 #define MAX_LINE_LENGTH 500
+#define MAX_USERS 100
 
 #define PROT_LOGIN 1
 #define PROT_LOGOUT 2
