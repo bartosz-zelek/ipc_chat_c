@@ -410,42 +410,118 @@ void catch_and_perform_unenroll_from_group_action(GroupData** groups_data, UserD
 void catch_and_perform_send_message_to_user_action(UserData** logged_users)
 {
     Message_to_user msg_to_user;
-    // char user_name[MAX_USERNAME_LENGTH];
-    // char message[MAX_MESSAGE_LENGTH];
     
     for (int i = 0; i < MAX_USERS; i++)
     {
         if (logged_users[i] != NULL)
         {
-            if (msgrcv(logged_users[i] -> queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_USER, IPC_NOWAIT) != -1)
+            if (msgrcv(logged_users[i] -> queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_USER_FROM, IPC_NOWAIT) != -1)
             {
                 for (int j = 0; j < MAX_USERS; j++)
                 {
-                    if (/*j != i && */logged_users[j] != NULL && (strcmp(logged_users[j] -> username, msg_to_user.user) == 0))
+                    if (j != i && logged_users[j] != NULL && (strcmp(logged_users[j] -> username, msg_to_user.user) == 0))
                     {
                         printf("Sending message from %s to %s\n", logged_users[i] -> username, msg_to_user.user);
 
                         // Sending message to destined user, chaning user in order to show who sent message
                         strcpy(msg_to_user.user, logged_users[i] -> username);
+                        msg_to_user.mtype = PROT_SEND_MESSAGE_TO_USER_TO;
                         if (msgsnd(logged_users[j] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
                         {
                             perror("Couldn't send message to destined user");
                         }
 
                         // Sending feedback info to sender, dunno if needed
-                        // strcpy(msg_to_user.msg, "Message sent succcesfully"); 
-                        // if (msgsnd(logged_users[i] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
-                        // {
-                        //     perror("Couldn't send feedback message to orignal user");
-                        // }
+                        strcpy(msg_to_user.msg, "Message sent succcesfully"); 
+                        msg_to_user.mtype = PROT_SEND_MESSAGE_TO_USER_RESPONSE;
+                        if (msgsnd(logged_users[i] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                        {
+                            perror("Couldn't send feedback message to orignal user");
+                        }
                         return;
                     }
+                }
+
+                // Sending feedback info to sender, dunno if needed
+                strcpy(msg_to_user.msg, "Message not send, unexisting or unlogged user"); 
+                msg_to_user.mtype = PROT_SEND_MESSAGE_TO_USER_RESPONSE;
+                if (msgsnd(logged_users[i] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                {
+                    perror("Couldn't send feedback message to orignal user");
                 }
 
             }
         }
     }
 }
+
+int group_index(char* group, GroupData** groups_data)
+{
+    for (int i = 0; i < MAX_GROUPS; i++)
+    {
+        if (strcmp(group, groups_data[i]->name) == 0)
+        {
+            return i;
+        }
+    }
+}
+
+int user_index(UserData** logged_users, char* username)
+{
+    for (int i = 0; i < MAX_GROUPS; i++)
+    {
+        if (strcmp(username, logged_users[i]->username) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void catch_and_perform_send_message_to_group(UserData** logged_users, GroupData** groups_data, int main_queue_id)
+{
+    Message_to_user msg;
+
+    char* users_in_group[MAX_USERS+1];
+
+    for (int i = 0; i < MAX_USERS; i++)
+    {
+        if (logged_users[i] != NULL)
+        {
+            if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_GROUP, 0) != 1) // user is group name in this case
+            {
+                char* original_username_index = logged_users[i]->username;
+                msg.mtype = PROT_SEND_MESSAGE_TO_USER_FROM;
+                int gr_index = group_index(msg.user, groups_data);
+                printf("Sending message to group: %s", groups_data[gr_index]->name);
+                for (int j = 0; j < sizeof(groups_data[gr_index]->usernames)/(sizeof(char)*MAX_USERNAME_LENGTH); j++)
+                {
+                    char* usrname = groups_data[gr_index]->usernames[j];
+                    if (usrname== NULL)
+                    {
+                        break;
+                    }
+                    if (user_index(logged_users,usrname) != -1)
+                    {
+                        strcpy(msg.user, usrname);
+                        if(msgsnd(main_queue_id, &msg, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                        {
+                            perror("Couldn't send message to user");
+                        }
+                    }
+                }
+                msg.mtype = PROT_SEND_MESSAGE_TO_GROUP_RESPONSE;
+                if(msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                    {
+                        perror("Couldn't send message to user");
+                    }
+                return;
+            }
+        }
+    }
+}
+
+
 
 int main(int argc, char* argv[]){
     int main_queue_id = msgget(MAIN_QUEUE_HEX, 0666 | IPC_CREAT);
@@ -478,6 +554,10 @@ int main(int argc, char* argv[]){
         catch_and_perform_enroll_to_group_action(groups_data, logged_users);
 
         catch_and_perform_unenroll_from_group_action(groups_data, logged_users);
+
+        catch_and_perform_send_message_to_user_action(logged_users);
+
+        catch_and_perform_send_message_to_group(logged_users, groups_data, main_queue_id);
     }
 
     return 0;
