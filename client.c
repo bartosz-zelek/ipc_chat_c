@@ -216,19 +216,15 @@ void send_message_to_group(int private_queue_id)
     scanf("%s", group_name);
     Message_to_user msg;
 
-    char **users_in_group = split_string_by_char(check_users_in_group(private_queue_id,group_name), '\n');
+    //char **users_in_group = split_string_by_char(check_users_in_group(private_queue_id,group_name), '\n');
 
-    //sizeof(users_in_group)/(sizeof(char) * MAX_USERNAME_LENGTH)
-    for (int i =0; i < 10; i++)
+    char *users_in_group = check_users_in_group(private_queue_id,group_name);
+    char div = '\n';
+    char *token = strtok(users_in_group, &div);
+    while (token != NULL)
     {
-        if (users_in_group[i] != NULL)
-        {
-            send_message_to_user(private_queue_id, users_in_group[i], mess);
-        }
-        else
-        {
-            break;
-        }
+        send_message_to_user(private_queue_id, token, mess);
+        token = strtok(NULL, &div);
     }
 
     free(users_in_group);
@@ -277,6 +273,7 @@ int main(int argc, char* argv[]){
         printf("6. Unenroll from group\n");
         printf("7. Send message to user\n");
         printf("8. Send message to group\n");
+        printf("9. Check your messages");
         printf("Enter action: ");
         int err;
         do
@@ -325,6 +322,8 @@ int main(int argc, char* argv[]){
             case 8:
                 send_message_to_group(private_queue_id);
                 break;
+            case 9:
+                receive_message_from_user(private_queue_id);
             default:
                 printf("Invalid action\n");
                 break;

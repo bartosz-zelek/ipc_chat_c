@@ -443,7 +443,7 @@ void catch_and_perform_send_message_to_user_action(UserData** logged_users)
                 }
 
                 // Sending feedback info to sender, dunno if needed
-                strcpy(msg_to_user.msg, "Message not send, unexisting or unlogged user"); 
+                strcpy(msg_to_user.msg, "Message not send, unexisting, unlogged or user is trying to send message to himself"); 
                 msg_to_user.mtype = PROT_SEND_MESSAGE_TO_USER_RESPONSE;
                 if (msgsnd(logged_users[i] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
                 {

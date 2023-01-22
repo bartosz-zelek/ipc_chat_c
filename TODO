@@ -12,13 +12,13 @@ Funkcje realizowane przez klienta:
     ✔ wypisanie się z grupy @done(23-01-06 16:10)
     ✔ podgląd listy dostępnych grup @done(23-01-01 22:51)
   3. Wiadomości:
-    ☐ wysłanie wiadomości do grupy
-    ☐ wysłanie wiadomości do użytkownika
-    ☐ odebranie wiadomości
+    ✔ wysłanie wiadomości do grupy @done(23-01-22 18:45)
+    ✔ wysłanie wiadomości do użytkownika @done(23-01-22 18:45)
+    ✔ odebranie wiadomości @done(23-01-22 18:45)
   Funkcje realizowane przez serwer:
     ✔ tworzenie użytkowników i grup tematycznych na podstawie pliku konfiguracyjnego (w gotowym rozwiązaniu należy dostarczyć plik konfiguracyjny tworzący konta dla 3 grup (group[1-3]) i dziewięciu użytkowników (test[1-9])) @done(23-01-01 19:57)
-    ☐ przesyłanie wiadomości otrzymanych od klienta/klientów do adresata/adresatów
-    ☐ potwierdzenia wykonania/odrzucenia żądania przez serwer
+    ✔ przesyłanie wiadomości otrzymanych od klienta/klientów do adresata/adresatów @done(23-01-22 18:45)
+    ✔ potwierdzenia wykonania/odrzucenia żądania przez serwer @done(23-01-22 18:45)
   Funkcjonalność dodatkowa:
     ☐ zablokowanie możliwości odbioru wiadomości (z grupy, od użytkownika)
     ✔ informacja o nieudanych próbach logowania / blokowanie konta po k próbach @done(23-01-21 02:01)
