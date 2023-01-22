@@ -264,7 +264,7 @@ int main(int argc, char* argv[]){
 
     int action;
     while (1){
-        receive_message_from_user(private_queue_id);
+        //receive_message_from_user(private_queue_id);
         printf("1. Logout and exit\n");
         printf("2. Check logged in users\n");
         printf("3. Check groups\n");
