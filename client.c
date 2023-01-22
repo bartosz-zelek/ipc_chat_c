@@ -273,17 +273,18 @@ int main(int argc, char* argv[]){
         printf("6. Unenroll from group\n");
         printf("7. Send message to user\n");
         printf("8. Send message to group\n");
-        printf("9. Check your messages");
+        printf("9. Check your messages\n");
         printf("Enter action: ");
-        int err;
-        do
-        {
-            err = scanf("%d", &action);
-            if (err != 1)
-            {
-                printf("Wrong input, try again\n");
-            }
-        } while (err != 1);
+        scanf("%d", &action);
+        // int err;
+        // do
+        // {
+        //     err = scanf("%d", &action);
+        //     if (err != 1)
+        //     {
+        //         printf("Wrong input, try again\n");
+        //     }
+        // } while (err != 1);
         
         
         printf("\n");
@@ -324,6 +325,7 @@ int main(int argc, char* argv[]){
                 break;
             case 9:
                 receive_message_from_user(private_queue_id);
+                break;
             default:
                 printf("Invalid action\n");
                 break;
