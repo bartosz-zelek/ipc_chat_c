@@ -7,12 +7,15 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/types.h>
+#include <errno.h>
 
 //struct User is defined in common.h and is used to send messages between server and client
 
 typedef struct{ // similar to User, but for inner use
     char username[MAX_USERNAME_LENGTH];
     char password[MAX_PASSWORD_LENGTH];
+    char *blocked_groups [MAX_GROUPS];
+    char *blocked_users [MAX_USERS];
     int pid;
     int queue_id;
 } UserData;
@@ -40,6 +43,14 @@ UserData** read_users_data_from_config(){
         users_data[i] = malloc(sizeof(UserData));
         strcpy(users_data[i]->username, user);
         strcpy(users_data[i]->password, password);
+        for (int j = 0; j < MAX_USERS; j++)
+        {
+            users_data[i]->blocked_users[j] = NULL;
+        }
+        for (int j = 0; j < MAX_USERS; j++)
+        {
+            users_data[i]->blocked_groups[j] = NULL;
+        }
     }
     users_data[i] = NULL;
     for (int i=0; users_with_passwords[i] != NULL; i++){
@@ -57,6 +68,45 @@ int are_credentials_valid(char* username, char* password, UserData** users_data)
         }
     }
     return 0;
+}
+
+int group_index(char* group, GroupData** groups_data)
+{
+    for (int i = 0; i < MAX_GROUPS; i++)
+    {
+        if (strcmp(group, groups_data[i]->name) == 0)
+        {
+            return i;
+        }
+    }
+}
+
+int user_index(UserData** logged_users, char* username)
+{
+    for (int i = 0; i < MAX_GROUPS; i++)
+    {
+        if (strcmp(username, logged_users[i]->username) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int get_user_index(UserData** logged_users, char *username)
+{
+    for (int i =0; i < MAX_USERS; i++)
+    {
+        if (logged_users[i] == NULL)
+        {
+            return -1;
+        }
+        else if (strcmp(logged_users[i]->username, username) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
 }
 
 // array of GroupData* elements, where name and usernames are set
@@ -407,7 +457,47 @@ void catch_and_perform_unenroll_from_group_action(GroupData** groups_data, UserD
     }
 }
 
-void catch_and_perform_send_message_to_user_action(UserData** logged_users)
+int is_user_blocked_from_sending_messages(UserData* user, char* username, UserData** users_from_config)
+{
+    int usr_index = get_user_index(users_from_config, username);
+    if (usr_index != -1)
+    {
+        for (int i = 0; i < MAX_USERS; i++)
+        {
+            if (user->blocked_users[i] == NULL)
+            {
+                return 0;
+            }
+            else if (strcmp(user->blocked_users[i], username) == 0)
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+int is_user_in_blocked_group(UserData* original_user, char* username_to_check, GroupData** groups_data) // Find in which group is this user and then check if this group is blocked
+{
+    for (int i = 0; i< MAX_GROUPS; i++)
+    {
+        if (groups_data[i] != NULL)
+        {
+            for (int j = 0; j < MAX_USERS; j++)
+            {
+                if (groups_data[i]->usernames[j] == NULL)
+                {
+                    return 0;
+                }
+                else if (strcmp(groups_data[i]->usernames[j], username_to_check) == 0)
+                {
+                    return 1;
+                }
+            }
+        }
+    }
+}
+void catch_and_perform_send_message_to_user_action(UserData** logged_users, UserData** users_from_config, GroupData** groups_data)
 {
     Message_to_user msg_to_user;
     
@@ -421,24 +511,38 @@ void catch_and_perform_send_message_to_user_action(UserData** logged_users)
                 {
                     if (j != i && logged_users[j] != NULL && (strcmp(logged_users[j] -> username, msg_to_user.user) == 0))
                     {
-                        printf("Sending message from %s to %s\n", logged_users[i] -> username, msg_to_user.user);
-
-                        // Sending message to destined user, chaning user in order to show who sent message
-                        strcpy(msg_to_user.user, logged_users[i] -> username);
-                        msg_to_user.mtype = PROT_SEND_MESSAGE_TO_USER_TO;
-                        if (msgsnd(logged_users[j] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                        UserData *user_to = users_from_config[(get_user_index(users_from_config, msg_to_user.user))];
+                        if (!is_user_blocked_from_sending_messages(user_to, logged_users[i] -> username, users_from_config) && !is_user_in_blocked_group(user_to, logged_users[i]->username, groups_data))
                         {
-                            perror("Couldn't send message to destined user");
-                        }
+                            printf("Sending message from %s to %s\n", logged_users[i] -> username, msg_to_user.user);
 
-                        // Sending feedback info to sender, dunno if needed
-                        strcpy(msg_to_user.msg, "Message sent succcesfully"); 
-                        msg_to_user.mtype = PROT_SEND_MESSAGE_TO_USER_RESPONSE;
-                        if (msgsnd(logged_users[i] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
-                        {
-                            perror("Couldn't send feedback message to orignal user");
+                            // Sending message to destined user, chaning user in order to show who sent message
+                            strcpy(msg_to_user.user, logged_users[i] -> username);
+                            msg_to_user.mtype = PROT_SEND_MESSAGE_TO_USER_TO;
+                            if (msgsnd(logged_users[j] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                            {
+                                perror("Couldn't send message to destined user");
+                            }
+
+                            // Sending feedback info to sender, dunno if needed
+                            strcpy(msg_to_user.msg, "Message sent succcesfully"); 
+                            msg_to_user.mtype = PROT_SEND_MESSAGE_TO_USER_RESPONSE;
+                            if (msgsnd(logged_users[i] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                            {
+                                perror("Couldn't send feedback message to orignal user");
+                            }
+                            return;
                         }
-                        return;
+                        else
+                        {
+                            strcpy(msg_to_user.msg, "You can't send message to this user because this user blocked you");
+                            msg_to_user.mtype = PROT_SEND_MESSAGE_TO_USER_RESPONSE;
+                            if (msgsnd(logged_users[i] ->queue_id, &msg_to_user, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                            {
+                                perror("Couldn't send feedback message to orignal user");
+                            }
+                            return;
+                        }
                     }
                 }
 
@@ -455,22 +559,121 @@ void catch_and_perform_send_message_to_user_action(UserData** logged_users)
     }
 }
 
-int group_index(char* group, GroupData** groups_data)
+
+// void catch_and_perform_send_message_to_group(UserData** logged_users, GroupData** groups_data, int main_queue_id)
+// {
+//     Message_to_user msg;
+
+//     char* users_in_group[MAX_USERS+1];
+
+//     for (int i = 0; i < MAX_USERS; i++)
+//     {
+//         if (logged_users[i] != NULL)
+//         {
+//             if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_GROUP, 0) != 1) // user is group name in this case
+//             {
+//                 char* original_username_index = logged_users[i]->username;
+//                 msg.mtype = PROT_SEND_MESSAGE_TO_USER_FROM;
+//                 int gr_index = group_index(msg.user, groups_data);
+//                 printf("Sending message to group: %s", groups_data[gr_index]->name);
+//                 for (int j = 0; j < sizeof(groups_data[gr_index]->usernames)/(sizeof(char)*MAX_USERNAME_LENGTH); j++)
+//                 {
+//                     char* usrname = groups_data[gr_index]->usernames[j];
+//                     if (usrname== NULL)
+//                     {
+//                         break;
+//                     }
+//                     if (user_index(logged_users,usrname) != -1)
+//                     {
+//                         strcpy(msg.user, usrname);
+//                         if(msgsnd(main_queue_id, &msg, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+//                         {
+//                             perror("Couldn't send message to user");
+//                         }
+//                     }
+//                 }
+//                 msg.mtype = PROT_SEND_MESSAGE_TO_GROUP_RESPONSE;
+//                 if(msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+//                     {
+//                         perror("Couldn't send message to original user");
+//                     }
+//                 return;
+//             }
+//         }
+//     }
+// }
+
+
+
+int block_user(UserData *user, char *username)
 {
-    for (int i = 0; i < MAX_GROUPS; i++)
+    for (int i = 0; i < MAX_USERS; i++)
     {
-        if (strcmp(group, groups_data[i]->name) == 0)
+        if (user->blocked_users[i] == NULL)
         {
-            return i;
+            user->blocked_users[i] = (char*)malloc(MAX_USERNAME_LENGTH*sizeof(char));
+            strcpy(user->blocked_users[i] , username);
+            return 0;
+        }
+        else if (strcmp(user->blocked_users[i], username) == 0)
+        {
+            return 1;
         }
     }
 }
 
-int user_index(UserData** logged_users, char* username)
+void catch_and_perform_block_user_action(UserData** users_from_config, GroupData** groups_data, UserData** logged_users)
+{
+    Message msg;
+    for (int i = 0; i < MAX_USERS; i++)
+    {
+        if (logged_users[i] != NULL)
+        {
+            if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message) - sizeof(long), PROT_BLOCK_USER, IPC_NOWAIT) != -1)
+            {
+                UserData *current_user = users_from_config[get_user_index(logged_users, logged_users[i]->username)];
+                if (get_user_index(users_from_config, msg.string) != -1)
+                {
+                    int resp = block_user(current_user, msg.string);
+                    msg.mtype = PROT_BLOCK_USER_RESPONSE;
+                    if (resp == 0)
+                    {
+                        strcpy(msg.string, "User successfully blocked");
+                    }
+                    else
+                    {
+                        strcpy(msg.string, "User already blocked");
+                    }
+                    if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1)
+                    {
+                        perror("Couldn't send feedback to user");
+                    }
+                }
+                else
+                {
+                    msg.mtype = PROT_BLOCK_USER_RESPONSE;
+                    strcpy(msg.string, "User does not exist");
+                    if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1)
+                    {
+                        perror("Couldn't send feedback to user");
+                    }
+                }
+                return;
+            }
+
+        }
+    }
+}
+
+int get_group_index(GroupData** groups_data, char* group)
 {
     for (int i = 0; i < MAX_GROUPS; i++)
     {
-        if (strcmp(username, logged_users[i]->username) == 0)
+        if (groups_data[i] == NULL)
+        {
+            return -1;
+        }
+        else if (strcmp(groups_data[i]->name, group) == 0)
         {
             return i;
         }
@@ -478,45 +681,62 @@ int user_index(UserData** logged_users, char* username)
     return -1;
 }
 
-void catch_and_perform_send_message_to_group(UserData** logged_users, GroupData** groups_data, int main_queue_id)
+int block_group(UserData* user, char* group)
 {
-    Message_to_user msg;
+    for (int i = 0; i < MAX_GROUPS; i++)
+    {
+        if (user->blocked_groups[i] == NULL)
+        {
+            user->blocked_groups[i] = (char*)malloc(MAX_GROUP_NAME_LENGTH*sizeof(char));
+            strcpy(user->blocked_users[i] , group);
+            return 0;
+        }
+        else if (strcmp(user->blocked_users[i], group) == 0)
+        {
+            return 1;
+        }
+    }
+}
 
-    char* users_in_group[MAX_USERS+1];
-
+void catch_and_perform_block_group_action(UserData** users_from_config, GroupData** groups_data, UserData** logged_users)
+{
+    Message msg;
     for (int i = 0; i < MAX_USERS; i++)
     {
         if (logged_users[i] != NULL)
         {
-            if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_GROUP, 0) != 1) // user is group name in this case
+            if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message) - sizeof(long), PROT_BLOCK_GROUP, IPC_NOWAIT) != -1)
             {
-                char* original_username_index = logged_users[i]->username;
-                msg.mtype = PROT_SEND_MESSAGE_TO_USER_FROM;
-                int gr_index = group_index(msg.user, groups_data);
-                printf("Sending message to group: %s", groups_data[gr_index]->name);
-                for (int j = 0; j < sizeof(groups_data[gr_index]->usernames)/(sizeof(char)*MAX_USERNAME_LENGTH); j++)
+                UserData *current_user = users_from_config[get_user_index(logged_users, logged_users[i]->username)];
+                if (get_group_index(groups_data, msg.string) != -1)
                 {
-                    char* usrname = groups_data[gr_index]->usernames[j];
-                    if (usrname== NULL)
+                    int resp = block_group(current_user, msg.string);
+                    msg.mtype = PROT_BLOCK_GROUP_RESPONSE;
+                    if (resp == 0)
                     {
-                        break;
+                        strcpy(msg.string, "Group successfully blocked");
                     }
-                    if (user_index(logged_users,usrname) != -1)
+                    else
                     {
-                        strcpy(msg.user, usrname);
-                        if(msgsnd(main_queue_id, &msg, sizeof(Message_to_user) - sizeof(long), 0) == -1)
-                        {
-                            perror("Couldn't send message to user");
-                        }
+                        strcpy(msg.string, "Group already blocked");
+                    }
+                    if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1)
+                    {
+                        perror("Couldn't send feedback to user");
                     }
                 }
-                msg.mtype = PROT_SEND_MESSAGE_TO_GROUP_RESPONSE;
-                if(msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message_to_user) - sizeof(long), 0) == -1)
+                else
+                {
+                    msg.mtype = PROT_BLOCK_GROUP_RESPONSE;
+                    strcpy(msg.string, "Group does not exist");
+                    if (msgsnd(logged_users[i]->queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1)
                     {
-                        perror("Couldn't send message to user");
+                        perror("Couldn't send feedback to user");
                     }
+                }
                 return;
             }
+
         }
     }
 }
@@ -531,10 +751,32 @@ int main(int argc, char* argv[]){
         exit(1);
     }
 
+    
+    while(1) // Clear server queue when starting server
+    {
+        User u;
+        msgrcv(main_queue_id, &u , 1, 0, IPC_NOWAIT | MSG_NOERROR);
+        printf("Removing message %s\n", strerror(errno));
+        if (errno == ENOMSG)
+        {
+            break;
+        }
+    }
     UserData* logged_users[MAX_USERS] = {NULL}; // array of logged users - no one is logged in at the beginning
     UserData** users_from_config = read_users_data_from_config(); // array of users from config file - size is MAX_USERS+1 (last element is NULL)
     GroupData** groups_data = read_groups_data_from_config(); // array of groups from config file - size is MAX_GROUPS+1 (last element is NULL)
     UnsuccessfulLoginAttempt** unsuccessful_login_attempts = malloc(sizeof(UnsuccessfulLoginAttempt*)*MAX_USERS); // array of unsuccessful login attempts - size is MAX_USERS
+
+    // for (int i = 0; i < MAX_USERS; i++)
+    // {
+    //     //User.blocked_users[i] = "";
+    //     strcpy(user_arg->blocked_users[i], "");
+    // }
+
+    // for (int i = 0; i < MAX_GROUPS; i++)
+    // {
+    //     strcpy(user_arg->blocked_groups[i], "");
+    // }
 
     for (int i=0; i<MAX_USERS; i++){
         unsuccessful_login_attempts[i] = NULL;
@@ -555,7 +797,11 @@ int main(int argc, char* argv[]){
 
         catch_and_perform_unenroll_from_group_action(groups_data, logged_users);
 
-        catch_and_perform_send_message_to_user_action(logged_users);
+        catch_and_perform_send_message_to_user_action(logged_users, users_from_config, groups_data);
+
+        catch_and_perform_block_user_action(users_from_config, groups_data, logged_users);
+
+        catch_and_perform_block_group_action(users_from_config, groups_data, logged_users);
 
         //catch_and_perform_send_message_to_group(logged_users, groups_data, main_queue_id);
     }

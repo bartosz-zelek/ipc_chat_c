@@ -26,6 +26,11 @@
 #define PROT_SEND_MESSAGE_TO_USER_RESPONSE 15
 #define PROT_SEND_MESSAGE_TO_GROUP 16
 #define PROT_SEND_MESSAGE_TO_GROUP_RESPONSE 17
+#define PROT_BLOCK_USER 18
+#define PROT_BLOCK_USER_RESPONSE 19
+#define PROT_BLOCK_GROUP 20
+#define PROT_BLOCK_GROUP_RESPONSE 21
+#define PROT_USER_DOES_NOT_EXIST 22
 
 #define MAX_UNSUCCESSFUL_LOGIN_ATTEMPTS 3 // it must be <=9
 
@@ -36,6 +41,8 @@ typedef struct {
     int pid;
     char username[MAX_USERNAME_LENGTH];
     char password[MAX_PASSWORD_LENGTH];
+    // char blocked_groups [MAX_GROUPS][MAX_GROUP_NAME_LENGTH];
+    // char blocked_users [MAX_USERS][MAX_USERNAME_LENGTH];
 } User;
 
 typedef struct{
