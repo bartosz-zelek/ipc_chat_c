@@ -20,5 +20,5 @@ Funkcje realizowane przez klienta:
     ✔ przesyłanie wiadomości otrzymanych od klienta/klientów do adresata/adresatów @done(23-01-22 18:45)
     ✔ potwierdzenia wykonania/odrzucenia żądania przez serwer @done(23-01-22 18:45)
   Funkcjonalność dodatkowa:
-    ☐ zablokowanie możliwości odbioru wiadomości (z grupy, od użytkownika)
+    ✔ zablokowanie możliwości odbioru wiadomości (z grupy, od użytkownika) @done(23-01-23 04:05)
     ✔ informacja o nieudanych próbach logowania / blokowanie konta po k próbach @done(23-01-21 02:01)

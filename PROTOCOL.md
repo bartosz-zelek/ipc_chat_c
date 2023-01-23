@@ -1,5 +1,5 @@
 
-INFO: W pliku common.h zdefiniowane są słowa kluczowe i stałe, pod które kompilator podczas kompilacji podstawia odpowiednie wartości. Nazwy te charakteryzują się tym, że pisane są konwencją snake_case, ale przy użyciu wersalików.
+INFO: W pliku inf151860_151765_c.h zdefiniowane są słowa kluczowe i stałe, pod które kompilator podczas kompilacji podstawia odpowiednie wartości. Nazwy te charakteryzują się tym, że pisane są konwencją snake_case, ale przy użyciu wersalików.
 
 W tym samym pliku umieszczone są wszystkie struktury, które używane są do komunikacji między procesami. Struktury do użytku wewnętrznego procesów znajdują się w plikach *.c tych konkretnych procesów.
 
@@ -53,7 +53,9 @@ char string[MAX_MESSAGE_LENGTH];
 
   
 
-Struktura Message ma o wiele szersze zastosowanie w tym projekcie. Zawiera ona tylko dwa pola są nimi mtype, w które proces wysyłający komunikat wpisuje typ komunikatu oraz pole string będące tablicą charów o wielkości `MAX_MESSAGE_LENGTH`. Struktura ta wykorzystywana jest przy pięciu zapytaniach wysyłanych od klienta do serwera. Pierwsze dwa: sprawdzenie zalogowanych użytkowników oraz sprawdzenie istniejących grup sprowadza się do wpisania przez klienta do struktury tylko typu komunikatu do pola mtype (kolejno: `PROT_CHECK_LOGGEDIN_REQUEST, PROT_CHECK_GROUPS_REQUEST`). Następuje wysłanie komunikatu do serwera. Serwer do pola string wpisuje odpowiednie dane i odsyła tę samą strukturę do użytkownika z typami kolejno: `PROT_CHECK_LOGGEDIN_RESPONSE, PROT_CHECK_GROUPS_RESPONSE`. Rolą klienta jest tylko wyświetlenie pola string struktury, bo serwer nie umieszcza tam tylko surowej informacji zwrotnej, lecz odpowiednio spreparowaną odpowiedź do użytkownika. Trzy ostatnie akcje tj. sprawdzenie użytkowników w konkretnej grupie, zapisanie użytkownika do grupy oraz wypisanie użytkownika do grupy działają w niemal identycznym schemacie do funkcjonalności opisanych wyżej z tą różnicą, że klient musi do pola string przekazać nazwę grupy, której ma dotyczyć się akcja. Typy komunikatów wysyłanych przez klienta to kolejno `PROT_CHECK_USERS_IN_GROUP_REQUEST, PROT_ENROLL_TO_GROUP_REQUEST, PROT_UNENROLL_FROM_GROUP_REQUEST`. A typy komunikatów odbieranych to kolejno: `PROT_CHECK_USERS_IN_GROUP_RESPONSE, PROT_ENROLL_TO_GROUP_RESPONSE, PROT_UNENROLL_FROM_GROUP_RESPONSE`.
+Struktura Message ma o wiele szersze zastosowanie w tym projekcie. Zawiera ona tylko dwa pola są nimi mtype, w które proces wysyłający komunikat wpisuje typ komunikatu oraz pole string będące tablicą charów o wielkości `MAX_MESSAGE_LENGTH`. Struktura ta wykorzystywana jest przy większości zapytaniach wysyłanych od klienta do serwera. Pierwsze dwa: sprawdzenie zalogowanych użytkowników oraz sprawdzenie istniejących grup sprowadza się do wpisania przez klienta do struktury tylko typu komunikatu do pola mtype (kolejno: `PROT_CHECK_LOGGEDIN_REQUEST, PROT_CHECK_GROUPS_REQUEST`). Następuje wysłanie komunikatu do serwera. Serwer do pola string wpisuje odpowiednie dane i odsyła tę samą strukturę do użytkownika z typami kolejno: `PROT_CHECK_LOGGEDIN_RESPONSE, PROT_CHECK_GROUPS_RESPONSE`. Rolą klienta jest tylko wyświetlenie pola string struktury, bo serwer nie umieszcza tam tylko surowej informacji zwrotnej, lecz odpowiednio spreparowaną odpowiedź do użytkownika. Trzy kolejne akcje tj. sprawdzenie użytkowników w konkretnej grupie, zapisanie użytkownika do grupy oraz wypisanie użytkownika do grupy działają w niemal identycznym schemacie do funkcjonalności opisanych wyżej z tą różnicą, że klient musi do pola string przekazać nazwę grupy, której ma dotyczyć się akcja. Typy komunikatów wysyłanych przez klienta to kolejno `PROT_CHECK_USERS_IN_GROUP_REQUEST, PROT_ENROLL_TO_GROUP_REQUEST, PROT_UNENROLL_FROM_GROUP_REQUEST`. A typy komunikatów odbieranych to kolejno: `PROT_CHECK_USERS_IN_GROUP_RESPONSE, PROT_ENROLL_TO_GROUP_RESPONSE, PROT_UNENROLL_FROM_GROUP_RESPONSE`.
+
+Funkcje te są również używanie w procesie blokowania użytkowaników i grup za pomocą komunikatów `PROT_BLOCK_USER, PROT_BLOCK_GROUP` oraz odpowiadających im komunikatów z nazwą `RESPONSE`. W tej sytuacji użytkownik jest proszony o podanie użytkownika bądź grupy użytkowników od których to nie chce otrzymywać wiadomości.
 
 #
 
@@ -101,43 +103,32 @@ Drugą funkcją, w której wykorzystywana jest owa struktura to wysyłanie wiado
 
   
 
-Tak prezentują się zdefiniowane w pliku common.h wartości wykorzystywane do określenia typów komunikatów:
+Tak prezentują się zdefiniowane w pliku inf151860_151765_c.h wartości wykorzystywane do określenia typów komunikatów:
 
 ```
 
 #define PROT_LOGIN 1
-
 #define PROT_LOGOUT 2
-
 #define PROT_CHECK_LOGGEDIN_REQUEST 3
-
 #define PROT_CHECK_LOGGEDIN_RESPONSE 4
-
 #define PROT_CHECK_GROUPS_REQUEST 5
-
 #define PROT_CHECK_GROUPS_RESPONSE 6
-
 #define PROT_CHECK_USERS_IN_GROUP_REQUEST 7
-
 #define PROT_CHECK_USERS_IN_GROUP_RESPONSE 8
-
 #define PROT_ENROLL_TO_GROUP_REQUEST 9
-
 #define PROT_ENROLL_TO_GROUP_RESPONSE 10
-
 #define PROT_UNENROLL_FROM_GROUP_REQUEST 11
-
 #define PROT_UNENROLL_FROM_GROUP_RESPONSE 12
-
 #define PROT_SEND_MESSAGE_TO_USER_FROM 13
-
 #define PROT_SEND_MESSAGE_TO_USER_TO 14
-
 #define PROT_SEND_MESSAGE_TO_USER_RESPONSE 15
-
 #define PROT_SEND_MESSAGE_TO_GROUP 16
-
 #define PROT_SEND_MESSAGE_TO_GROUP_RESPONSE 17
+#define PROT_BLOCK_USER 18
+#define PROT_BLOCK_USER_RESPONSE 19
+#define PROT_BLOCK_GROUP 20
+#define PROT_BLOCK_GROUP_RESPONSE 21
+#define PROT_USER_DOES_NOT_EXIST 22
 
 ```
 
