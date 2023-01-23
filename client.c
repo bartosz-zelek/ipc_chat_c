@@ -371,7 +371,7 @@ int main(int argc, char* argv[]){
             case 11:
                 printf("Insert group to block: ");
                 char grp_name[MAX_GROUP_NAME_LENGTH];
-                scanf("%s", group_name);
+                scanf("%s", grp_name);
                 block_messages_from_group(private_queue_id, grp_name, user);
                 break;
             default:

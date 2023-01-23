@@ -487,7 +487,7 @@ int is_user_in_blocked_group(UserData* original_user, char* username_to_check, G
             {
                 if (groups_data[i]->usernames[j] == NULL)
                 {
-                    return 0;
+                    break;
                 }
                 else if (strcmp(groups_data[i]->usernames[j], username_to_check) == 0)
                 {
@@ -496,6 +496,7 @@ int is_user_in_blocked_group(UserData* original_user, char* username_to_check, G
             }
         }
     }
+    return 0;
 }
 void catch_and_perform_send_message_to_user_action(UserData** logged_users, UserData** users_from_config, GroupData** groups_data)
 {
@@ -688,10 +689,10 @@ int block_group(UserData* user, char* group)
         if (user->blocked_groups[i] == NULL)
         {
             user->blocked_groups[i] = (char*)malloc(MAX_GROUP_NAME_LENGTH*sizeof(char));
-            strcpy(user->blocked_users[i] , group);
+            strcpy(user->blocked_groups[i] , group);
             return 0;
         }
-        else if (strcmp(user->blocked_users[i], group) == 0)
+        else if (strcmp(user->blocked_groups[i], group) == 0)
         {
             return 1;
         }
