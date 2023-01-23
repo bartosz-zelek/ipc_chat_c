@@ -23,6 +23,7 @@ int login_procedure(int main_queue_id, User* user_arg){
     strcpy(user.username, username);
     strcpy(user.password, password);
 
+
     if (msgsnd(main_queue_id, &user, sizeof(User)-sizeof(long), 0) == -1){
         perror("Error: Could not send message to server");
         // exit(1);
@@ -38,6 +39,17 @@ int login_procedure(int main_queue_id, User* user_arg){
         user_arg->pid = user.pid;
         strcpy(user_arg->username, user.username);
         strcpy(user_arg->password, user.password);
+        // for (int i = 0; i < MAX_USERS; i++)
+        // {
+        //     //User.blocked_users[i] = "";
+        //     strcpy(user_arg->blocked_users[i], "");
+        // }
+
+        // for (int i = 0; i < MAX_GROUPS; i++)
+        // {
+        //     strcpy(user_arg->blocked_groups[i], "");
+        // }
+
         return 1;
     } else {
         printf("Login failed (%s)\n\n", response.string);
@@ -172,9 +184,16 @@ void send_message_to_user(int private_queue_id, char* username, char* mess)
 void receive_message_from_user(int private_queue_id)
 {
     Message_to_user msg;
-    if (msgrcv(private_queue_id, &msg,sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_USER_TO, IPC_NOWAIT) != -1)
+    while(1)
     {
-        printf("User %s sent you a message:\n%s\n", msg.user, msg.msg);
+        if (msgrcv(private_queue_id, &msg,sizeof(Message_to_user) - sizeof(long), PROT_SEND_MESSAGE_TO_USER_TO, IPC_NOWAIT) != -1)
+        {
+            printf("User %s sent you a message:\n%s\n \n", msg.user, msg.msg);
+        }
+        else
+        {
+            return;
+        }
     }
 }
 
@@ -245,10 +264,35 @@ void send_message_to_group(int private_queue_id)
     // }
 }
 
-// void print_string_divided_by_char(char div, char *string)
-// {
+void block_messages_from_user(int private_queue_id, char* username, User *user)
+{
+    Message msg;
+    msg.mtype = PROT_BLOCK_USER;
+    strcpy(msg.string, username);
+    if (msgsnd(private_queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1)
+    {
+        perror("Error: Coludn't send message asking to block user");
+    }
+    if (msgrcv(private_queue_id, &msg, sizeof(Message) - sizeof(long), PROT_BLOCK_USER_RESPONSE, 0) != -1)
+    {
+        printf("%s\n \n", msg.string);
+    }
+}
 
-// }
+void block_messages_from_group(int private_queue_id, char* group_name, User *user)
+{
+    Message msg;
+    msg.mtype = PROT_BLOCK_GROUP;
+    strcpy(msg.string, group_name);
+    if (msgsnd(private_queue_id, &msg, sizeof(Message) - sizeof(long), 0) == -1)
+    {
+        perror("Error: Coludn't send message asking to block group");
+    }
+    if (msgrcv(private_queue_id, &msg, sizeof(Message) - sizeof(long), PROT_BLOCK_GROUP_RESPONSE, 0) != -1)
+    {
+        printf("%s\n \n", msg.string);
+    }
+}
 
 int main(int argc, char* argv[]){
     int main_queue_id = msgget(MAIN_QUEUE_HEX, 0666 | IPC_CREAT);
@@ -264,7 +308,6 @@ int main(int argc, char* argv[]){
 
     int action;
     while (1){
-        //receive_message_from_user(private_queue_id);
         printf("1. Logout and exit\n");
         printf("2. Check logged in users\n");
         printf("3. Check groups\n");
@@ -274,17 +317,10 @@ int main(int argc, char* argv[]){
         printf("7. Send message to user\n");
         printf("8. Send message to group\n");
         printf("9. Check your messages\n");
+        printf("10. Block messages from user\n");
+        printf("11. Block messages from group\n");
         printf("Enter action: ");
         scanf("%d", &action);
-        // int err;
-        // do
-        // {
-        //     err = scanf("%d", &action);
-        //     if (err != 1)
-        //     {
-        //         printf("Wrong input, try again\n");
-        //     }
-        // } while (err != 1);
         
         
         printf("\n");
@@ -313,18 +349,30 @@ int main(int argc, char* argv[]){
                 break;
             case 7:
                 printf("Enter user to which you want to send message to:\n");
-                char user[MAX_USERNAME_LENGTH];
-                scanf("%s", user);
+                char usr[MAX_USERNAME_LENGTH];
+                scanf("%s", usr);
                 printf("Enter content of the message:\n");
                 char mess[MAX_MESSAGE_LENGTH];
                 scanf("%s", mess);
-                send_message_to_user(private_queue_id, user, mess);
+                send_message_to_user(private_queue_id, usr, mess);
                 break;
             case 8:
                 send_message_to_group(private_queue_id);
                 break;
             case 9:
                 receive_message_from_user(private_queue_id);
+                break;
+            case 10:
+                printf("Insert user to block: ");
+                char username[MAX_USERNAME_LENGTH];
+                scanf("%s", username);
+                block_messages_from_user(private_queue_id, username, user);
+                break;
+            case 11:
+                printf("Insert group to block: ");
+                char grp_name[MAX_GROUP_NAME_LENGTH];
+                scanf("%s", group_name);
+                block_messages_from_group(private_queue_id, grp_name, user);
                 break;
             default:
                 printf("Invalid action\n");
