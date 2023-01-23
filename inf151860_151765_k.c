@@ -202,7 +202,6 @@ void send_message_to_group(int private_queue_id)
     printf("Enter group name:\n");
     char group_name[MAX_GROUP_NAME_LENGTH];
     scanf("%s", group_name);
-    Message_to_user msg;
 
     char *users_in_group = check_users_in_group(private_queue_id,group_name);
     char div = '\n';

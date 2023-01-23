@@ -79,6 +79,7 @@ int group_index(char* group, GroupData** groups_data)
             return i;
         }
     }
+    return -1;
 }
 
 int user_index(UserData** logged_users, char* username)
@@ -477,17 +478,28 @@ int is_user_in_blocked_group(UserData* original_user, char* username_to_check, G
     {
         if (groups_data[i] != NULL)
         {
-            for (int j = 0; j < MAX_USERS; j++)
+            for (int k = 0; k < MAX_GROUPS; k++)
             {
-                if (groups_data[i]->usernames[j] == NULL)
+                if (original_user->blocked_groups[i] == NULL)
                 {
                     break;
                 }
-                else if (strcmp(groups_data[i]->usernames[j], username_to_check) == 0)
+                else if (strcmp(original_user->blocked_groups[i], groups_data[i]->name) == 0)
                 {
-                    return 1;
+                    for (int j = 0; j < MAX_USERS; j++)
+                    {
+                        if (groups_data[i]->usernames[j] == NULL)
+                        {
+                            break;
+                        }
+                        else if (strcmp(groups_data[i]->usernames[j], username_to_check) == 0)
+                        {
+                            return 1;
+                        }
+                    }
                 }
             }
+
         }
     }
     return 0;
@@ -556,14 +568,14 @@ void catch_and_perform_send_message_to_user_action(UserData** logged_users, User
 
 
 
-int block_user(UserData *user, char *username)
+int block_user(UserData *user, char *username/*, UserData** users_from_config*/)
 {
     for (int i = 0; i < MAX_USERS; i++)
     {
         if (user->blocked_users[i] == NULL)
         {
             user->blocked_users[i] = (char*)malloc(MAX_USERNAME_LENGTH*sizeof(char));
-            strcpy(user->blocked_users[i] , username);
+            strcpy(user->blocked_users[i], username);
             return 0;
         }
         else if (strcmp(user->blocked_users[i], username) == 0)
@@ -571,6 +583,7 @@ int block_user(UserData *user, char *username)
             return 1;
         }
     }
+    return 0;
 }
 
 void catch_and_perform_block_user_action(UserData** users_from_config, GroupData** groups_data, UserData** logged_users)
@@ -582,7 +595,7 @@ void catch_and_perform_block_user_action(UserData** users_from_config, GroupData
         {
             if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message) - sizeof(long), PROT_BLOCK_USER, IPC_NOWAIT) != -1)
             {
-                UserData *current_user = users_from_config[get_user_index(logged_users, logged_users[i]->username)];
+                UserData *current_user = users_from_config[get_user_index(users_from_config, logged_users[i]->username)];
                 if (get_user_index(users_from_config, msg.string) != -1)
                 {
                     int resp = block_user(current_user, msg.string);
@@ -647,6 +660,7 @@ int block_group(UserData* user, char* group)
             return 1;
         }
     }
+    return 0;
 }
 
 void catch_and_perform_block_group_action(UserData** users_from_config, GroupData** groups_data, UserData** logged_users)
@@ -658,7 +672,7 @@ void catch_and_perform_block_group_action(UserData** users_from_config, GroupDat
         {
             if (msgrcv(logged_users[i]->queue_id, &msg, sizeof(Message) - sizeof(long), PROT_BLOCK_GROUP, IPC_NOWAIT) != -1)
             {
-                UserData *current_user = users_from_config[get_user_index(logged_users, logged_users[i]->username)];
+                UserData *current_user = users_from_config[get_user_index(users_from_config, logged_users[i]->username)];
                 if (get_group_index(groups_data, msg.string) != -1)
                 {
                     int resp = block_group(current_user, msg.string);
