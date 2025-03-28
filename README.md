@@ -1,27 +1,19 @@
+## ipc_chat_c
 
-# ipc_chat_c
+To compile the program, execute the following commands in the project directory:
 
-  
+```bash
+gcc -o server.out inf151860_151765_s.c inf151860_151765_c.c
+gcc -o client.out inf151860_151765_k.c
+```
 
-Aby skompliować program należy wykonać następujące komendy w katalogu projektu:
+To run the client, use the command: `./client.out`
 
-`gcc -o server.out inf151860_151765_s.c inf151860_151765_c.c`
-`gcc -o client.out inf151860_151765_k.c`
+To run the server, use the command: `./server.out`
 
-Uruchomienie klienta to komenda: `./client.out`
+Alternatively, you can run the script `./comp.sh`, which automatically compiles the project files and starts the server process.
 
-Uruchomienie serwera to komenda: `./server.out`
+## File Description
 
-  
-
-Alternatywnie można uruchomić skrypt `./comp.sh`, który automatycznie skompiluje pliki projektu oraz uruchomi proces serwera.
-#
-
-Opis plików:
-
-`inf151860_151765_k.c` - plik z funkcjonalnością klienta. Umożliwia komunikację z serwerem poprzez otworzenie publicznej kolejki do serwera. Po zalogowaniu się z serwerem komunikuje się już tylko poprzez prywatną kolejkę stworzoną przez serwer. Zawiera następujące funkcje o następujących nazwach które same w sobie wyjaśniają ich funkcjonalność: `login_procedure, logout_procedure, check_loggedin_users, check_groups, check_users_in_group, enroll_to_group, unenroll_from_group, send_message_to_user, revieve_message_from user, send_message_to_group`. W dużym skrócie rola klienta to przekazywanie poleceń użytkownika do serwera i wyświetlanie wyników tychże poleceń.
-
-  
-
-`inf151860_151765_s.c` - plik z funkcjonalnościa serwera. Tu zaimplementowana jest główna funkcjonalność projektu. Program rozpoczyna się od pobrania informacji z pliku konfiguracyjnego. Są to jedyne dane trwałe. Serwer naturalnie traktuje go jako plik niemodyfikowalny. A wszystkie dane powstałe podczas działania programu zapisywana są w pamięci RAM ergo istnieją tak długo jak długo działa uruchomiony serwer. Sercem programu jest nieskończona pętla while. Tam wywoływane są funkcje typu `catch_and_perform_[...]_action`. Funkcje te przechwytują polecenia od uzytkowników i uruchamiają odpowiednie akcje.
-#
+- `inf151860_151765_k.c`: This file contains the client functionality. It enables communication with the server by opening a public queue to the server. After logging in, it communicates only through a private queue created by the server. It includes functions with self-explanatory names such as `login_procedure`, `logout_procedure`, `check_loggedin_users`, `check_groups`, `check_users_in_group`, `enroll_to_group`, `unenroll_from_group`, `send_message_to_user`, `receive_message_from_user`, `send_message_to_group`. In brief, the client's role is to pass user commands to the server and display the results of these commands.
+- `inf151860_151765_s.c`: This file contains the server functionality. It implements the main functionality of the project. The program starts by retrieving information from a configuration file, which is the only persistent data. The server treats it as a non-modifiable file, and all data generated during the program's execution are stored in RAM, existing as long as the server is running. The heart of the program is an infinite `while` loop where functions like `catch_and_perform_[...]_action` are called. These functions capture commands from users and execute appropriate actions.
